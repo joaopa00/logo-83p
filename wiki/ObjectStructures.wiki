@@ -1,3 +1,5 @@
+#summary Notes on object structures
+
 These are the object structures currently defined:
 
 == SYMBOL structure ==
@@ -71,17 +73,11 @@ eventually be a way for users to create their own primitives.
 
 Flags for a primitive may include:
 
- * Is it position-independent?  If it is, and there aren't any memory
- protection issues, we can run it without moving/copying it in memory.
- If it's not PI, or if it's stored too high in memory, it will be
- copied to appBackUpScreen or some similar location... which means all
- primitives have to be very short.
+ * Is it position-independent?  If it is, and there aren't any memory protection issues, we can run it without moving/copying it in memory. If it's not PI, or if it's stored too high in memory, it will be copied to appBackUpScreen or some similar location... which means all primitives have to be very short.
 
  Built-in primitives will probably also have this flag set, even
  though they aren't PI, since they won't ever move around.
 
- * Could it create or destroy TIOS variable data?  (If not, we don't
- have to worry about the Logo appvar being moved.)
+ * Could it create or destroy TIOS variable data?  (If not, we don't have to worry about the Logo appvar being moved.)
 
- * Will it preserve the static storage used by Logo, including the
- imathptrs?
+ * Will it preserve the static storage used by Logo, including the imathptrs?
