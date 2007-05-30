@@ -23,10 +23,10 @@ Node pointer:
 = Nodes =
 
 Low bits of the first byte can be used to identify type:
- - 000 = object (requires pointer management)
- - 100 = reference (object without a pointer)  (free nodes count as references)
- - 10 = list node
- - 1 = FP data
+ * 000 = object (requires pointer management)
+ * 100 = reference (object without a pointer)  (free nodes count as references)
+ * 10 = list node
+ * 1 = FP data
 
 Bit 7 of the second byte is reserved for the garbage collector.
 
@@ -146,14 +146,14 @@ It is worth noting that this format severely restricts the possible
 values for the BUTFIRST.  Because bits 0, 1, and 15 are fixed and
 cannot be used for storage, we have two limitations:
 
- - The BUTFIRST must be another node, not an integer.  This is
+ * The BUTFIRST must be another node, not an integer.  This is
  consistent with the standard interpretation that the BUTFIRST is a
  list.  (In Lisp, cons cells are often used for things other than
  ordinary linked lists.  This is not done in Logo; the standard
  primitives, such as FPUT, do not allow it.  In UCBLogo it is only
  possible by using .SETBF.)
 
- - The BUTFIRST must be a user node, not a builtin node.  In the
+ * The BUTFIRST must be a user node, not a builtin node.  In the
  future, it might be possible for a builtin node to have another
  builtin node as its BUTFIRST; but I don't currently plan on having
  any builtin list nodes anyway.
