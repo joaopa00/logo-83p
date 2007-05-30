@@ -6,19 +6,15 @@ Such a value may be either an unsigned 15-bit integer, or a reference
 to a "node."
 
 Integer (15-bit unsigned):
-`
-  0IIIIIII IIIIIIII
-`
+  `0IIIIIII IIIIIIII`
 
 Node pointer:
-`
-  1NNNNNNN nnnnnnZ0
-   \____________/|\
-    node number  | reserved
-                 |
-                 zone = 0 for builtin nodes (located in Flash)
-                        1 for user created nodes (located in RAM)
-`
+  `1NNNNNNN nnnnnnZ0`
+  ` \____________/|\`
+  `  node number  | reserved`
+  `               |`
+  `               zone = 0 for builtin nodes (located in Flash)`
+  `                      1 for user created nodes (located in RAM)`
 
 = Nodes =
 
@@ -45,13 +41,11 @@ obarray bin, and (b) the user doesn't alter the symbol's
 procedure/variable definition or properties.
 
 == FREE node ==
-`
-  00000100 *0000000 nnnnnnnn NNNNNNNN
-                    \_______________/
-                     reference to next
-                     node in free list;
-                     0 if none.
-`
+  `00000100 *0000000 nnnnnnnn NNNNNNNN`
+  `                  \_______________/`
+  `                   reference to next`
+  `                   node in free list;`
+  `                   0 if none.`
 
 Free nodes are created by the garbage collector when a previously-used
 node is no longer referenced.  (Memory which has been allocated for
@@ -98,11 +92,9 @@ avoid allocating excessive numbers of extra nodes.
 
 
 == OBJECT node ==
-`
-  TTTTT000 *PPPPPPP aaaaaaaa AAAAAAAA
-  \___/     \_______________________/
-   type     absolute address of data
-`
+  `TTTTT000 *PPPPPPP aaaaaaaa AAAAAAAA`
+  `\___/     \_______________________/`
+  ` type     absolute address of data`
 
 Objects contain a data section; the format is dependent on the type.
 With the exception of arrays, objects are essentially immutable, and
@@ -118,11 +110,9 @@ others to be determined.
 
 
 == REFERENCE node ==
-`
-  TTTTT100 *xxxxxxx nnnnnnnn NNNNNNNN
-  \___/     \_____/ \_______________/
-   type      data    value
-`
+  `TTTTT100 *xxxxxxx nnnnnnnn NNNNNNNN`
+  `\___/     \_____/ \_______________/`
+  ` type      data    value`
 
 Reference nodes are similar to object nodes but contain a 16-bit value
 parameter (which might be an integer, or might be a reference to
@@ -133,11 +123,9 @@ others to be determined.
 
 
 == LIST node ==
-`
-  aaaaaa10 *AAAAAAA bbbbbbbb BBBBBBBB
-  \_______________/ \_______________/
-   BUTFIRST (CDR)    FIRST element (CAR)
-`
+  `aaaaaa10 *AAAAAAA bbbbbbbb BBBBBBBB`
+  `\_______________/ \_______________/`
+  ` BUTFIRST (CDR)    FIRST element (CAR)`
 
 A list consists of a FIRST (also known as CAR) and a BUTFIRST (also
 known as CDR or REST.)
@@ -163,9 +151,7 @@ could be defined to be user node 0.
 
 
 == FLOAT node ==
-`
-  xxxxxxx1 *xxxxxxx Lxxxxxxx xxxxxxxx
-`
+  `xxxxxxx1 *xxxxxxx Lxxxxxxx xxxxxxxx`
 
 Floating-point numbers are normally stored on the 83+ as 9 bytes:
 sign, exponent, and 7 BCD bytes of mantissa.  We can cram an FP-number
@@ -175,15 +161,11 @@ times the high nibble.  Converting binary->BCD is more computationally
 difficult, but we can use a LUT.
 
 A complete real number:
-`
-    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm
-    \________________________/ \______/  \________________________/ /\_____/
-     high 3 bytes of mantissa   exponent  next 3 bytes of mantissa /  mantissa
-                                                                  sign
-`
+  `  mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm`
+  `  \________________________/ \______/  \________________________/ /\_____/`
+  `   high 3 bytes of mantissa   exponent  next 3 bytes of mantissa /  mantissa`
+  `                                                                sign`
 
 A complete complex number:
-`
-    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 0mmmmmmm Smmmmmmm
-    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm
-`
+  `  mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 0mmmmmmm Smmmmmmm`
+  `  mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm`
