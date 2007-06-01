@@ -176,7 +176,7 @@ difficult, but we can use a LUT.
 
 A complete real number:
 {{{
-    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm
+    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 0mmmmmmm Smmmmmmm
     \________________________/ \______/  \________________________/ /\_____/
      high 3 bytes of mantissa   exponent  next 3 bytes of mantissa /  mantissa
                                                                   sign
@@ -184,6 +184,6 @@ A complete real number:
 
 A complete complex number:
 {{{
-    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 0mmmmmmm Smmmmmmm
-    mmmmmmm1 *mmmmmmm 0mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm
+    mmmmmmm1 *mmmmmmm 1mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm
+    mmmmmmm1 *mmmmmmm 1mmmmmmm EEEEEEEE  mmmmmmm1 *mmmmmmm 1mmmmmmm Smmmmmmm
 }}}
