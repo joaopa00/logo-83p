@@ -3,6 +3,26 @@
 ;;; Memory Management Routines
 ;;;
 
+
+;; SaveWorkspace:
+;;
+;; Save current state to the workspace appvar.
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+;; - OP1
+
+SaveWorkspace:
+	ld hl,(appvarStart)
+	ld de,7
+	add hl,de
+	ex de,hl
+	ld hl,savedData
+	ld bc,savedDataSize
+	ldir
+	ret
+	
+	
 ;; OpenWorkspace:
 ;;
 ;; Create a new, default workspace appvar, or reload the old one if it
@@ -21,25 +41,33 @@ OpenWorkspace:
 	or a
 	jr nz,OpenWorkspace_UnArchive
 	ex de,hl
-	inc hl
-	inc hl
 	ld (appvarStartMPtr),hl
-	push hl
+	push de
+	 inc hl
+	 inc hl
+
+	 ;; Check first 5 bytes
+	 ld de,WorkspaceTemplate
+	 ld b,5
+OpenWorkspace_CheckLoop:
+	 ld a,(de)
+	 cp (hl)
+	 jr nz,OpenWorkspace_Invalid
+	 inc de
+	 inc hl
+	 djnz OpenWorkspace_CheckLoop
+
 	 ld de,savedData
 	 ld bc,savedDataSize
 	 ldir
-	 pop hl
-	ld hl,(appvarStart)	; Check if appvar has moved
-	sbc hl,de		; HL = (last known address) - (current address)
-				;    = amount appvar has been moved backwards
-	ret z
-	ld (appvarStart),de
-	ld b,h
-	ld c,l
-	ld de,0			; "deletion address" set to zero ->
-				; all pointers must be adjusted
+	 pop de
+	jr UpdateWorkspace
 
-	jr DeleteObjectMemUpdate
+OpenWorkspace_Invalid:
+	 pop hl
+	ld de,(appvarStartMPtr)
+	BCALL _DelVar
+	jr OpenWorkspace
 
 OpenWorkspace_UnArchive:
 	BCALL _Arc_Unarc
@@ -60,6 +88,38 @@ OpenWorkspace_Create:
 
 	jr OpenWorkspace
 
+
+;; UpdateWorkspace:
+;;
+;; Update the workspace appvar after it might have moved.  Call this
+;; routine when we're sure that the saferam is intact, but we may have
+;; allocated or deallocated TIOS variables.
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+
+UpdateWorkspace:
+	or a
+	ld hl,(appvarStart)	; Check if appvar has moved
+	ld de,(appvarStartMPtr)
+	sbc hl,de		; HL = (last known address) - (current
+				; address) = amount appvar has been
+				; moved backwards
+	ret z
+	ld (appvarStart),de
+	ld b,h
+	ld c,l
+	ld de,0			; "deletion address" set to zero ->
+				; all pointers must be adjusted
+
+	call ResizeAppvar	; we actually don't want to change the
+				; appvar's size, but
+				; DeleteObjectMemUpdate will decrease
+				; it by BC, so compensate by adding BC
+				; here.
+
+	jr DeleteObjectMemUpdate
+	
 
 ;; InsertObjectMem:
 ;;
@@ -266,6 +326,8 @@ InsertFinalObjectMem:
 ;; - AF, HL
 
 InsertFinalObjectMemUpdate:
+	call ResizeAppvar
+	
 	;; Update pointers to the node table, which has been moved
 	ld hl,(userNodeStartMinus2)
 	add hl,bc
@@ -281,10 +343,23 @@ InsertFinalObjectMemUpdate:
 
 	;; ... More pointers? ...
 
+	ret
+
+
+;; ResizeAppvar:
+;;
+;; Resize the workspace appvar after memory has been inserted or
+;; deleted.
+;;
+;; Input:
+;; - BC = number of bytes inserted
+;;
+;; Destroys:
+;; - AF, HL
+	
+ResizeAppvar:
 	;; Resize the appvar
 	ld hl,(appvarStart)
-	dec hl
-	dec hl
 	ld a,(hl)
 	add a,c
 	ld (hl),a
@@ -315,8 +390,9 @@ InsertUninitNodeMem:
 	ex de,hl
 	add hl,bc
 	ld (uninitNodeEnd),hl
-	;; No pointers to update -- UNM is the last thing in the appvar.
-	ret	
+	;; No other pointers to update -- UNM is the last thing in the
+	;; appvar.
+	jr ResizeAppvar
 
 
 ;; DoInsertMem:

@@ -96,7 +96,7 @@ AllocNode:
 	ld hl,(freeNodeList)
 	ld a,h
 	or l
-	jr nz,AllocNode_FreeListEmpty
+	jr z,AllocNode_FreeListEmpty
 	push hl
 	 call UserRefToPointerPlus2
 	 ld e,(hl)
@@ -156,7 +156,7 @@ AllocNodePair:
 	ld hl,(freeNodePairList)
 	ld a,h
 	or l
-	jr nz,AllocNodePair_FreeListEmpty
+	jr z,AllocNodePair_FreeListEmpty
 	push hl
 	 call UserRefToPointerPlus2
 	 ld e,(hl)
@@ -215,7 +215,7 @@ AllocNodeQuad:
 	ld hl,(freeNodeQuadList)
 	ld a,h
 	or l
-	jr nz,AllocNodeQuad_FreeListEmpty
+	jr z,AllocNodeQuad_FreeListEmpty
 	push hl
 	 call UserRefToPointerPlus2
 	 ld e,(hl)
@@ -273,7 +273,7 @@ AllocUNM:
 	 dec hl
 	 sbc hl,de
 	 jr c,AllocUNM_Fail
-	 ld (uninitNodeEnd),de
+	 ld (uninitNodeStart),de
 	 pop hl
 	ret
 AllocUNM_Fail:
@@ -295,11 +295,11 @@ AllocUNM_Fail:
 ;; - AF, DE, HL
 
 FreeNode:
-	ld de,(freeNodePairList)
-	ld (freeNodePairList),hl
+	ld de,(freeNodeList)
+	ld (freeNodeList),hl
 	call UserRefToPointer
 SetNodeFree:
-	ld (hl),T_FREE
+	ld (hl),T_FREE<<2
 	inc hl
 	ld a,(currentGCFlag)
 	ld (hl),a
