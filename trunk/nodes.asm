@@ -350,3 +350,4 @@ FreeNodeQuad:
 	ld de,0
 	call SetNodeFree
 	jr SetPairFree
+

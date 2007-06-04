@@ -3,11 +3,11 @@
 ;;; Miscellaneous Data
 ;;;
 
-WorkspaceAppVarName:
+workspaceAppVarName:
 	db AppVarObj, "logows", 0
 
-WorkspaceTemplate:
-	rorg 2
+workspaceTemplate:
+	rorg 0
 	db "LgWS", 0
 
 	;; Static data
@@ -29,5 +29,12 @@ wst_userNodeStart:
 wst_uninitNodeStart:
 wst_uninitNodeEnd:
 
-WorkspaceTemplateSize:
+workspaceTemplateSize:
+	rorg $$
+
+;;; Builtin nodes
+builtinNodeStart:
+	rorg $8000
+voidNode:
+	db T_VOID<<2, 0, 0, 0
 	rorg $$

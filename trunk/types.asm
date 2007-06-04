@@ -45,37 +45,3 @@ GetType_List:
 	 pop hl
 	ld a,T_LIST
 	ret
-
-
-;; IsList:
-;;
-;; Determine if a value is a list (either empty or nonempty.)
-;;
-;; Input:
-;; - HL = value
-;;
-;; Output:
-;; - CF set if value is not a list
-;;
-;; Destroys:
-;; - A
-
-IsList:
-	bit 7,h
-	scf
-	ret z
-	push hl
-	 call RefToPointer
-	 ld a,(hl)
-	 pop hl
-	rrca
-	ret c
-	rrca
-	ccf
-	ret nc
-	cp T_EMPTY
-	ret z
-	scf
-	ret
-
-

@@ -4,7 +4,7 @@
 ;;;
 
 
-;; CreateList:
+;; NewList:
 ;;
 ;; Create a new list node.
 ;;
@@ -19,7 +19,7 @@
 ;; Destroys:
 ;; - AF, BC, DE
 
-CreateList:
+NewList:
 	;; Create a new node
 	push hl
 	 push de
@@ -41,7 +41,7 @@ CreateList:
 	ret
 
 
-;; GetFirst:
+;; GetListFirst:
 ;;
 ;; Get first element of a list.  No error checking here.  GIGO.
 ;;
@@ -54,7 +54,7 @@ CreateList:
 ;; Destroys:
 ;; - AF
 
-GetFirst:
+GetListFirst:
 	call RefToPointer
 	inc hl
 	inc hl
@@ -65,7 +65,7 @@ GetFirst:
 	ret
 
 
-;; GetButfirst:
+;; GetListButfirst:
 ;;
 ;; Get butfirst of a list.  No error checking here.  GIGO.
 ;;
@@ -78,7 +78,7 @@ GetFirst:
 ;; Destroys:
 ;; - AF
 
-GetButfirst:
+GetListButfirst:
 	call RefToPointer
 	ld a,(hl)
 	inc hl
@@ -86,4 +86,37 @@ GetButfirst:
 	ld l,a
 	set 7,h
 	ret
+
+
+;; IsList:
+;;
+;; Determine if a value is a list (either empty or nonempty.)
+;;
+;; Input:
+;; - HL = value
+;;
+;; Output:
+;; - CF set if value is not a list
+;;
+;; Destroys:
+;; - A
+
+IsList:
+	bit 7,h
+	scf
+	ret z
+	push hl
+	 call RefToPointer
+	 ld a,(hl)
+	 pop hl
+	rrca
+	ret c
+	rrca
+	ccf
+	ret nc
+	cp T_EMPTY
+	ret z
+	scf
+	ret
+
 

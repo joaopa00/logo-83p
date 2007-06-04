@@ -16,7 +16,7 @@ BCALL macro addr
 ;;; RAM Areas
 ;;;
 
- org textShadow
+ org cmdShadow
 
 savedData:
 
@@ -31,7 +31,8 @@ freeNodeQuadList:	ds 2
 
 savedDataSize equ $ - savedData
 
-appvarStartMPtr equ iMathPtr1
+appvarStartMPtr		equ iMathPtr1
+newObjectMPtr		equ iMathPtr2
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
