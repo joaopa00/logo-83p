@@ -8,7 +8,7 @@ all: testmem.8xp
 testmem.8xp: testmem.bin
 	$(TIPACK) testmem.bin -p -o testmem.8xp
 
-testmem.bin: testmem.asm
+testmem.bin: testmem.asm *.asm
 	$(TPASM) $(TPASMFLAGS) testmem.asm -o intel testmem.hex -l testmem.lst
 	$(OBJCOPY) -I ihex testmem.hex -O binary testmem.bin
 

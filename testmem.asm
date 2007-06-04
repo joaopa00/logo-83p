@@ -8,15 +8,10 @@
  org userMem-2
  db t2ByteTok, tasmCmp
 
-	xor a
-	jr nc,Start
-	;; UNREACHABLE
-	db "Test",0
-
-Start:
 	BCALL _RunIndicOff
-	res appTextSave,(iy+appFlags)
 	call OpenWorkspace
+	ld hl,8002h
+	ld (selectedNode),hl
 Loop:
 	BCALL _ClrLCDFull
 	ld hl,0
@@ -35,12 +30,20 @@ Loop:
 RedrawLoop:
 	call GetType
 	push hl
+	 ld de,(selectedNode)
+	 or a
+	 sbc hl,de
+	 jr nz,Redraw_NotSelected
+	 set textInverse,(iy+textFlags)
+Redraw_NotSelected:
+
 	 ld hl,TypeCharTable
 	 ld e,a
 	 ld d,0
 	 add hl,de
 	 ld a,(hl)
 	 BCALL _PutC
+	 res textInverse,(iy+textFlags)
 	 pop hl
 	inc hl
 	inc hl
@@ -58,38 +61,104 @@ KeyLoop:
 	BCALL _GetKey
 	cp kClear
 	ret z
+	cp kLeft
+	jr z,Left
+	cp kRight
+	jr z,Right
 	cp kCapL
-	jr z,AllocSomething
+	jr z,AllocAList
+	cp kCapS
+	jr z,AllocAString
 	cp kCapF
 	jr z,FreeSomething
 	jr KeyLoop
+	
+Left:	ld hl,(selectedNode)
+	ld de,-4
+	add hl,de
+	ld (selectedNode),hl
+	jr Loop	
 
-AllocSomething:
-	ld hl,8002h
+Right:	ld hl,(selectedNode)
+	ld de,4
+	add hl,de
+	ld (selectedNode),hl
+	jr Loop	
+
+AllocAList:
+	ld hl,(selectedNode)
 	ld de,8002h
-	call CreateList
+	call NewList
+	ld (selectedNode),hl
 Proceed:
 	call SaveWorkspace
-	jr Loop
+	jp Loop
+
+AllocAString:
+	call GetS
+	push hl
+	 BCALL _StrLength
+	 call NewString
+	 ld (selectedNode),hl
+	 pop hl
+	ldir
+	jr Proceed
 
 FreeSomething:
-	BCALL _RunIndicOn
-	BCALL _GetKey
-	push af
-	 BCALL _RunIndicOff
-	 pop af
-	sub k0
-	jr c,KeyLoop
-	cp 10
-	jr nc,KeyLoop
-	inc a
-	add a,a
-	add a,a
-	add a,2
-	ld l,a
-	ld h,80h
+	ld hl,(selectedNode)
 	call FreeNode
 	jr Proceed
+
+GetS:
+	ld hl,7
+	ld (curRow),hl
+	BCALL _EraseEOL
+	ld hl,appBackUpScreen
+GetS_Loop:
+	push hl
+	 BCALL _CursorOn
+	 BCALL _GetKey
+	 push af
+	  BCALL _CursorOff
+	  pop af
+	 pop hl
+	cp kLeft
+	jr z,GetS_Del
+	cp kEnter
+	jr z,GetS_Done
+	cp EchoStart
+	jr c,GetS_Loop
+	ld e,a
+	cp 0FCh
+	jr c,GetS_1B
+	ld d,a
+	ld a,(keyExtend)
+	ld e,a
+GetS_1B:
+	push hl
+	 BCALL _KeyToString
+	 inc hl
+	 ld a,(hl)
+	 pop hl
+	ld (hl),a
+	inc hl
+	BCALL _PutC
+	jr GetS_Loop
+
+GetS_Del:
+	dec hl
+	ld a,(curCol)
+	dec a
+	ld (curCol),a
+	ld a,' '
+	BCALL _PutMap
+	jr GetS_Loop
+
+GetS_Done:
+	ld (hl),0
+	ld hl,appBackUpScreen
+	ret
+
 
 TypeCharTable:
 	db "?.?V?L?EA?O?????"
@@ -97,11 +166,13 @@ TypeCharTable:
 	db "????????????????"
 	db "????????????????"
 
-builtinNodeStart:
-	;; ...
+
+selectedNode:	dw 0
 
  include "mem.asm"
  include "nodes.asm"
  include "types.asm"
  include "list.asm"
+ include "objects.asm"
+ include "word.asm"
  include "data.asm"

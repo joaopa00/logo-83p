@@ -14,7 +14,7 @@
 
 SaveWorkspace:
 	ld hl,(appvarStart)
-	ld de,7
+	ld de,5
 	add hl,de
 	ex de,hl
 	ld hl,savedData
@@ -33,39 +33,41 @@ SaveWorkspace:
 ;; - OP1
 
 OpenWorkspace:
-	ld hl,WorkspaceAppVarName
+	ld hl,workspaceAppVarName
 	rst rMOV9TOOP1
 	BCALL _ChkFindSym
 	jr c,OpenWorkspace_Create
 	ld a,b
 	or a
 	jr nz,OpenWorkspace_UnArchive
-	ex de,hl
-	ld (appvarStartMPtr),hl
 	push de
-	 inc hl
-	 inc hl
+	 push hl
+	  ex de,hl
+	  inc hl
+	  inc hl
+	  ld (appvarStartMPtr),hl
 
-	 ;; Check first 5 bytes
-	 ld de,WorkspaceTemplate
-	 ld b,5
+	  ;; Check first 5 bytes
+	  ld de,workspaceTemplate
+	  ld b,5
 OpenWorkspace_CheckLoop:
-	 ld a,(de)
-	 cp (hl)
-	 jr nz,OpenWorkspace_Invalid
-	 inc de
-	 inc hl
-	 djnz OpenWorkspace_CheckLoop
+	  ld a,(de)
+	  cp (hl)
+	  jr nz,OpenWorkspace_Invalid
+	  inc de
+	  inc hl
+	  djnz OpenWorkspace_CheckLoop
 
-	 ld de,savedData
-	 ld bc,savedDataSize
-	 ldir
+	  ld de,savedData
+	  ld bc,savedDataSize
+	  ldir
+	  pop hl
 	 pop de
 	jr UpdateWorkspace
 
 OpenWorkspace_Invalid:
-	 pop hl
-	ld de,(appvarStartMPtr)
+	  pop hl
+	 pop de
 	BCALL _DelVar
 	jr OpenWorkspace
 
@@ -74,13 +76,13 @@ OpenWorkspace_UnArchive:
 	jr OpenWorkspace
 
 OpenWorkspace_Create:
-	ld hl,WorkspaceTemplateSize
+	ld hl,workspaceTemplateSize
 	push hl
 	 BCALL _CreateAppVar
 	 pop bc
 	inc de
 	inc de
-	ld hl,WorkspaceTemplate
+	ld hl,workspaceTemplate
 	ldir
 
 	;; We might want at this point to fill in the template with
@@ -360,6 +362,8 @@ InsertFinalObjectMemUpdate:
 ResizeAppvar:
 	;; Resize the appvar
 	ld hl,(appvarStart)
+	dec hl
+	dec hl
 	ld a,(hl)
 	add a,c
 	ld (hl),a
