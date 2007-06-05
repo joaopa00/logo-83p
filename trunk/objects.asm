@@ -41,6 +41,37 @@ NewObject:
 	ret
 
 
+;; NewAtom:
+;;
+;; Create a new atom.
+;;
+;; Input:
+;; - C = type byte (type ID << 2)
+;; - BHL = data
+;;
+;; Output:
+;; - HL = reference to new atom
+;;
+;; Destroys:
+;; - AF, BC, DE
+
+NewAtom:
+	push hl
+	 push bc
+	  call AllocNode
+	  pop bc
+	 ld (hl),c
+	 inc hl
+	 ld (hl),b
+	 pop bc
+	inc hl
+	ld (hl),c
+	inc hl
+	ld (hl),b
+	ex de,hl
+	ret
+
+
 ;; GetObjectSize:
 ;;
 ;; Determine the size of a given object's data section.  Do not pass
@@ -53,11 +84,11 @@ NewObject:
 ;; - HL = size of object's data
 ;;
 ;; Destroys:
-;; - AF, BC
+;; - AF, BC, DE
 
 GetObjectSize:
-	call RefToPointer
-	ld a,(hl)
+	call GetNodeContents
+GetObjectSizeC:
 	cp T_SYMBOL<<2
 	jr z,GetObjectSize_Symbol
 	cp T_STRING<<2
@@ -69,32 +100,46 @@ GetObjectSize:
 	BCALL _ErrDataType
 
 GetObjectSize_String:
-	inc hl
-	ld b,(hl)
-	inc hl
-	ld a,(hl)
-	inc hl
-	ld h,(hl)
-	ld l,a
-	call LoadHLIndPaged
+	LOAD_HL_iBHL
 	inc hl
 	inc hl
 	ret
 
 GetObjectSize_Symbol:
-	inc hl
-	ld b,(hl)
-	inc hl
-	ld a,(hl)
-	inc hl
-	ld h,(hl)
-	ld l,a
-	push de
-	 ld de,8
-	 call Add_BHL_DE
-	 pop de
-	call LoadHLIndPaged
+	ld de,8
+	ADD_BHL_DE
+	LOAD_HL_iBHL
 	ld bc,10
 	add hl,bc
 	ret
 
+
+;; FreeObject:
+;;
+;; Free an object node along with its accompanying data.  Do not call
+;; this on anything other than a valid user object node.  (This
+;; routine should only ever be used by the garbage collector anyway.)
+;;
+;; Input:
+;; - HL = reference to object
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+
+FreeObject:
+	push hl
+	 call GetNodeContents
+	 ld c,a
+	 ld a,b
+	 or a
+	 jr nz,FreeObject_NonRAMData
+	 push hl
+	  ld a,c
+	  call GetObjectSizeC
+	  ld b,h
+	  ld c,l
+	  pop de
+	 call DeleteObjectMem
+FreeObject_NonRAMData:
+	 pop hl
+	jp FreeNode

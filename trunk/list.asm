@@ -97,6 +97,8 @@ GetListButfirst:
 ;;
 ;; Output:
 ;; - CF set if value is not a list
+;; - CF clear, ZF set if value is an empty list
+;; - CF clear, ZF clear if value is a nonempty list
 ;;
 ;; Destroys:
 ;; - A
@@ -109,6 +111,7 @@ IsList:
 	 call RefToPointer
 	 ld a,(hl)
 	 pop hl
+	or a
 	rrca
 	ret c
 	rrca

@@ -57,6 +57,54 @@ Redraw_NotSelected:
 	or c
 	jr nz,RedrawLoop
 
+	ld hl,7
+	ld (curRow),hl
+
+	ld hl,(selectedNode)
+	call IsWord
+	jr c,NotWord
+	push hl
+	 call GetWordSize
+	 ld b,h
+	 ld c,l
+	 pop hl
+
+	ld a,Lquote
+	BCALL _PutC
+	ld a,Lbar
+	BCALL _PutC
+	ld de,0
+DispWordLoop:
+	ld a,b
+	or c
+	jr z,DispWordDone
+	push bc
+	 push de
+	  push hl
+	   call GetWordChar
+	   BCALL _PutC
+	   pop hl
+	  pop de
+	 pop bc
+	inc de
+	dec bc
+	jr DispWordLoop
+DispWordDone:
+	ld a,Lbar
+	BCALL _PutC
+	jr KeyLoop
+
+NotWord:
+	ld de,(userNodeStartMinus2)
+	inc de
+	inc de
+	ld hl,(appvarStart)
+	ld bc,savedDataSize+5
+	add hl,bc
+	ex de,hl
+	sbc hl,de
+	BCALL _DispHL
+
 KeyLoop:
 	BCALL _GetKey
 	cp kClear
@@ -77,13 +125,13 @@ Left:	ld hl,(selectedNode)
 	ld de,-4
 	add hl,de
 	ld (selectedNode),hl
-	jr Loop	
+	jp Loop	
 
 Right:	ld hl,(selectedNode)
 	ld de,4
 	add hl,de
 	ld (selectedNode),hl
-	jr Loop	
+	jp Loop	
 
 AllocAList:
 	ld hl,(selectedNode)
@@ -106,6 +154,16 @@ AllocAString:
 
 FreeSomething:
 	ld hl,(selectedNode)
+	push hl
+	 call RefToPointer
+	 ld a,(hl)
+	 pop hl
+	and 7
+	jr nz,FreeOnlyNode
+	call FreeObject
+	jr Proceed
+
+FreeOnlyNode:
 	call FreeNode
 	jr Proceed
 
