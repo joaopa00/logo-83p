@@ -240,10 +240,10 @@ InsertObjectMemUpdate_Loop:
 	 ;; Have we reached the end of the node table?
 	 ld a,b
 	 cp h
-	 jr c,InsertObjectMemUpdate_Continue
+	 jr nz,InsertObjectMemUpdate_Continue
 	 ld a,c
 	 cp l
-	 jr nc,InsertObjectMemUpdate_Done
+	 jr z,InsertObjectMemUpdate_Done
 InsertObjectMemUpdate_Continue:
 	 ;; Is this an object node?
 	 ld a,(hl)

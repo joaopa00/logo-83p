@@ -39,6 +39,37 @@ UserRefToPointerPlus2:
 	jr UserRefToPointer
 
 
+;; GetNodeContents:
+;;
+;; Retrieve the contents of a node.  Do not pass anything other than a
+;; valid node reference.  GIGO.
+;;
+;; Input:
+;; - HL = node reference
+;;
+;; Output:
+;; - A = first byte (for object nodes, the type)
+;; - B = second byte (for object nodes, the page)
+;; - L = third byte (LSB of value / address)
+;; - H = (DE) = fourth byte (MSB of value / address)
+;;
+;; Destroys:
+;; - F
+
+GetNodeContents:
+	call RefToPointer
+	ld a,(hl)
+	inc hl
+	ld b,(hl)
+	res 7,b
+	inc hl
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	ex de,hl
+	ret
+
+
 ;; UserPointerToRef:
 ;;
 ;; Convert a pointer to a user node into a reference to that node.

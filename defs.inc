@@ -10,6 +10,57 @@ BCALL macro addr
 	list
 	.endm
 
+NO_PAGED_MEM equ 1
+
+ ifdef NO_PAGED_MEM
+
+ADD_BHL_DE macro
+	add hl,de
+	.endm
+
+LOAD_A_iBHL macro
+	ld a,(hl)
+	.endm
+
+LOAD_HL_iBHL macro
+	ld a,(hl)
+	inc hl
+	ld h,(hl)
+	ld l,a
+	.endm
+
+INC_BHL macro
+	inc hl
+	.endm
+
+FLASH_TO_RAM macro
+	ldir
+	.endm
+
+ else
+
+ADD_BHL_DE macro
+	call Add_BHL_DE
+	.endm
+
+LOAD_A_iBHL macro
+	call Load_A_iBHL
+	.endm
+
+LOAD_HL_iBHL macro
+	call Load_HL_iBHL
+	.endm
+	
+INC_BHL macro
+	call Inc_BHL
+	.endm
+
+FLASH_TO_RAM macro
+	call FlashToRAM
+	.endm
+
+ endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
