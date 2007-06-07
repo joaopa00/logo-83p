@@ -144,6 +144,9 @@ IsWord:
 ;; - AF, B
 
 GetWordSize:
+	call IsWord
+	jp c,TypeAssertionFailed
+GetWordSize_nc:
 	bit 7,h
 	jr z,GetWordSize_Integer
 	push de
@@ -257,6 +260,9 @@ GetWordSize_Integer_9984_10239:
 ;; - F, BC, DE, HL
 
 GetWordChar:
+	call IsWord
+	jp c,TypeAssertionFailed
+GetWordChar_nc:
 	bit 7,h
 	jr z,GetWordChar_Integer
 	push de
@@ -364,6 +370,9 @@ GetWordChar_Integer:
 ;; - AF, BC, HL
 
 GetWordChars:
+	call IsWord
+	jp c,TypeAssertionFailed
+GetWordChars_nc:
 	bit 7,h
 	jr z,GetWordChars_Integer
 	push de
