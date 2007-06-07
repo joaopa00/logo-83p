@@ -10,8 +10,7 @@
 ;;
 ;; Input:
 ;; - HL = FIRST element of the list
-;; - DE = BUTFIRST of the list (caller is responsible for ensuring
-;;   that this is a user node.)
+;; - DE = BUTFIRST of the list (must be a user node)
 ;;
 ;; Output:
 ;; - HL = new list
@@ -20,6 +19,11 @@
 ;; - AF, BC, DE
 
 NewList:
+	bit 7,d
+	jp z,TypeAssertionFailed
+	bit 1,e
+	jp z,TypeAssertionFailed
+NewList_nc:
 	;; Create a new node
 	push hl
 	 push de
@@ -43,7 +47,7 @@ NewList:
 
 ;; GetListFirst:
 ;;
-;; Get first element of a list.  No error checking here.  GIGO.
+;; Get first element of a list.
 ;;
 ;; Input:
 ;; - HL = nonempty list
@@ -55,6 +59,10 @@ NewList:
 ;; - AF
 
 GetListFirst:
+	call IsList
+	jp c,TypeAssertionFailed
+	jp z,TypeAssertionFailed
+GetListFirst_nc:
 	call RefToPointer
 	inc hl
 	inc hl
@@ -67,7 +75,7 @@ GetListFirst:
 
 ;; GetListButfirst:
 ;;
-;; Get butfirst of a list.  No error checking here.  GIGO.
+;; Get butfirst of a list.
 ;;
 ;; Input:
 ;; - HL = nonempy list
@@ -79,6 +87,10 @@ GetListFirst:
 ;; - AF
 
 GetListButfirst:
+	call IsList
+	jp c,TypeAssertionFailed
+	jp z,TypeAssertionFailed
+GetListButfirst_nc:
 	call RefToPointer
 	ld a,(hl)
 	inc hl
