@@ -233,4 +233,5 @@ selectedNode:	dw 0
  include "list.asm"
  include "objects.asm"
  include "word.asm"
+ include "assert.asm"
  include "data.asm"
