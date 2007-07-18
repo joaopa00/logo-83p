@@ -1,3 +1,5 @@
+;;; -*- TI-Asm -*-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Assertions
@@ -10,6 +12,8 @@
 
 ;;; This will also eventually be more friendly.
 
+TypeAssertionFailed1:
+	 pop af
 StackAssertionFailed:
 TypeAssertionFailed:
 	push hl
@@ -28,6 +32,7 @@ TypeAssertionFailed:
 	BCALL _DispHL
 	BCALL _GetKey
 	BCALL _ErrArgument
+	;; UNREACHABLE
 
 AssertionFailedStr:
 	db "Assertion failed"

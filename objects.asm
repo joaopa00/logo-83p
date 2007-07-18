@@ -1,3 +1,5 @@
+;;; -*- TI-Asm -*-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; General Object Manipulation Routines
@@ -62,13 +64,38 @@ NewAtom:
 	  pop bc
 	 ld (hl),c
 	 inc hl
-	 ld (hl),b
+	 ld a,(currentGCFlag)
+	 or b
+	 ld (hl),a
 	 pop bc
 	inc hl
 	ld (hl),c
 	inc hl
 	ld (hl),b
 	ex de,hl
+	ret
+
+
+;; GetAtomData:
+;;
+;; Get the data field from an atom.
+;;
+;; Input:
+;; - HL = atom
+;;
+;; Output:
+;; - BHL = data
+;;
+;; Destroys:
+;; - AF
+
+GetAtomData:
+	bit 7,h
+	jp z,TypeAssertionFailed
+	call GetNodeContents
+	xor 4
+	and 7
+	jp nz,TypeAssertionFailed
 	ret
 
 
@@ -97,7 +124,10 @@ GetObjectSizeC:
 ; 	jr z,GetObjectSize_Array
 ; 	cp T_ARRAY_OFFSET<<2
 ; 	jr z,GetObjectSize_OffsetArray
+;	cp T_SUBR<<2
+;	jr z,GetObjectSize_Subr
 	BCALL _ErrDataType
+	;; UNREACHABLE
 
 GetObjectSize_String:
 	LOAD_HL_iBHL

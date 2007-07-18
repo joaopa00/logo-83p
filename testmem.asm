@@ -95,6 +95,42 @@ DispWordDone:
 	jr KeyLoop
 
 NotWord:
+	call IsList
+	jr c,NotList
+	jr z,NotList
+
+	ld a,LlBrack
+	BCALL _PutC
+	push hl
+	 call GetListFirst
+	 bit 7,h
+	 jr z,FirstIsInt
+	 res 7,h
+	 srl h
+	 rr l
+	 srl h
+	 rr l
+	 ld a,'#'
+	 BCALL _PutC
+FirstIsInt:
+	 BCALL _DispHL
+	 ld a,Lperiod
+	 BCALL _PutC
+	 pop hl
+	call GetListButfirst
+	res 7,h
+	srl h
+	rr l
+	srl h
+	rr l
+	ld a,'#'
+	BCALL _PutC
+	BCALL _DispHL
+	ld a,LrBrack
+	BCALL _PutC
+	jr KeyLoop
+
+NotList:
 	ld de,(userNodeStartMinus2)
 	inc de
 	inc de
@@ -117,6 +153,8 @@ KeyLoop:
 	jr z,AllocAList
 	cp kCapS
 	jr z,AllocAString
+	cp kCapP
+	jr z,ParseSomething
 	cp kCapF
 	jr z,FreeSomething
 	jr KeyLoop
@@ -152,8 +190,29 @@ AllocAString:
 	ldir
 	jr Proceed
 
+ParseSomething:
+	call GetS
+	push hl
+	 BCALL _StrLength
+	 pop hl
+	call ParseBuffer
+	ld (selectedNode),hl
+	jr Proceed
+
 FreeSomething:
 	ld hl,(selectedNode)
+	call GetType
+	cp T_FREE
+	jr z,Proceed
+	cp T_VOID
+	jr z,Proceed
+	cp T_EMPTY
+	jr z,Proceed
+	cp T_SYMBOL
+	jr z,Proceed
+	cp T_INT
+	jr z,Proceed
+
 	push hl
 	 call RefToPointer
 	 ld a,(hl)
@@ -175,6 +234,7 @@ GetS:
 GetS_Loop:
 	push hl
 	 BCALL _CursorOn
+	 res onInterrupt,(iy+onFlags)
 	 BCALL _GetKey
 	 push af
 	  BCALL _CursorOff
@@ -227,11 +287,4 @@ TypeCharTable:
 
 selectedNode:	dw 0
 
- include "mem.asm"
- include "nodes.asm"
- include "types.asm"
- include "list.asm"
- include "objects.asm"
- include "word.asm"
- include "assert.asm"
- include "data.asm"
+ include "logocore.asm"
