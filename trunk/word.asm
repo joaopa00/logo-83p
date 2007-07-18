@@ -1,3 +1,5 @@
+;;; -*- TI-Asm -*-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Word Manipulation Routines
@@ -70,6 +72,7 @@ NewSymbol:
 	 ld (hl),0		; 
 	 inc hl			; next pointer
 	 ld (hl),0		; 
+	 inc hl
 	 pop bc
 	ld (hl),c
 	inc hl
@@ -95,8 +98,54 @@ NewSymbol:
 NewChar:
 	ld bc,T_CHAR<<2
 	ld l,a
-	ld h,0
+	ld h,b
 	jp NewAtom
+	
+
+;; NewQuote:
+;;
+;; Create a new quote-prefixed word.
+;;
+;; Input:
+;; - HL = word
+;;
+;; Output:
+;; - HL = word with quote prepended
+;;
+;; Destroys:
+;; - AF
+
+NewQuote:
+	push bc
+	 push de
+	  ld bc,T_QUOTE<<2
+	  call NewAtom
+	  pop de
+	 pop bc
+	ret
+
+
+;; NewColon:
+;;
+;; Create a new colon-prefixed word.
+;;
+;; Input:
+;; - HL = word
+;;
+;; Output:
+;; - HL = word with colon prepended
+;;
+;; Destroys:
+;; - AF
+
+NewColon:
+	push bc
+	 push de
+	  ld bc,T_COLON<<2
+	  call NewAtom
+	  pop de
+	 pop bc
+	ret
 
 
 ;; IsWord:
@@ -164,6 +213,7 @@ GetWordSize_nc:
 ;	 rrca
 ;	 jr c,GetWordSize_Float
 	 BCALL _ErrDataType
+	 ;; UNREACHABLE
 
 GetWordSize_Symbol:
 	 ld de,8
@@ -280,6 +330,7 @@ GetWordChar_nc:
 ;	 rrca
 ;	 jr c,GetWordChar_Float
 	 BCALL _ErrDataType
+	 ;; UNREACHABLE
 
 GetWordChar_Symbol:
 	 ld de,8
@@ -390,6 +441,7 @@ GetWordChars_nc:
 ;	 rrca
 ;	 jr c,GetWordChars_Float
 	 BCALL _ErrDataType
+	 ;; UNREACHABLE
 
 GetWordChars_Symbol:
 	 ld de,8
@@ -401,11 +453,11 @@ GetWordChars_String:
 	   pop bc
 	  ex de,hl
 	  pop hl
-	  INC_BHL
-	  INC_BHL
-	  ld a,b
-	  ld b,d
-	  ld c,e
+	 INC_BHL
+	 INC_BHL
+	 ld a,b
+	 ld b,d
+	 ld c,e
 	 pop de
 	FLASH_TO_RAM
 	ret
@@ -457,3 +509,148 @@ GetWordChars_Integer_DigitLoop:
 	ret
 
 
+;; GetSymbolProcedure:
+;;
+;; Get the procedure definition (if any) associated with a symbol.
+;;
+;; Input:
+;; - HL = symbol
+;;
+;; Output:
+;; - HL = procedure definition, or void if undefined
+;;
+;; Destroys:
+;; - AF, BC, DE
+
+GetSymbolProcedure:
+	bit 7,h
+	jp z,TypeAssertionFailed
+GetSymbolProcedure_nc:
+	call GetNodeContents
+	cp T_SYMBOL<<2
+	jp nz,TypeAssertionFailed
+	LOAD_HL_iBHL
+	ret
+	
+
+;; GetSymbolVariable:
+;;
+;; Get the variable value (if any) associated with a symbol.
+;;
+;; Input:
+;; - HL = symbol
+;;
+;; Output:
+;; - HL = variable value, or void if undefined
+;;
+;; Destroys:
+;; - AF, BC, DE
+
+GetSymbolVariable:
+	bit 7,h
+	jp z,TypeAssertionFailed
+GetSymbolVariable_nc:
+	call GetNodeContents
+	cp T_SYMBOL<<2
+	jp nz,TypeAssertionFailed
+	INC_BHL
+	INC_BHL
+	LOAD_HL_iBHL
+	ret
+
+
+;; GetNamedSymbol:
+;;
+;; Find (or create) the symbol with the given name.
+;;
+;; Input:
+;; - HL = address of first character of name
+;; - BC = number of characters in name
+;;
+;; Output:
+;; - HL = symbol
+;;
+;; Destroys:
+;; - AF, BC, DE
+
+GetNamedSymbol:
+	ld (symbolSearchMPtr),hl
+	ld (symbolSearchLen),bc
+	ld hl,(firstSymbol)
+	push af
+	 push hl
+	  jr GetNamedSymbol_NextSymbol
+GetNamedSymbol_NextSymbol1:
+	   pop af
+GetNamedSymbol_NextSymbol:
+	  pop hl
+	 pop af
+	ld a,h
+	or l
+	jr z,GetNamedSymbol_Failed
+	push hl			; current symbol
+	 call GetNodeContents
+	 cp T_SYMBOL<<2
+	 jp nz,TypeAssertionFailed1
+	 ld de,6
+	 ADD_BHL_DE
+	 LOAD_DE_iBHL
+	 push de		; next symbol
+	  INC_BHL
+	  LOAD_DE_iBHL		; DE = length of current symbol
+	  INC_BHL
+	  ;; Check if length is the same
+	  push hl
+	   ld hl,(symbolSearchLen)
+	   or a
+	   sbc hl,de
+	   pop hl
+	  jr nz,GetNamedSymbol_NextSymbol
+	  ld c,d
+	  ld a,e			; CA = length
+	  ld de,(symbolSearchMPtr) ; DE -> search string, BHL -> symbol
+GetNamedSymbol_CompareLoop:
+	  push af
+	   or c
+	   jr z,GetNamedSymbol_Done
+	   LOAD_A_iBHL
+	   ex de,hl
+	   cp (hl)
+	   jr nz,GetNamedSymbol_NextSymbol1
+	   ex de,hl
+	   inc de
+	   INC_BHL
+	   pop af
+	  sub 1
+	  jr nc,GetNamedSymbol_CompareLoop
+	  dec c
+	  jr GetNamedSymbol_CompareLoop
+GetNamedSymbol_Done:
+	   pop af
+	  pop hl
+	 pop hl
+	ret
+GetNamedSymbol_Failed:
+	;; Create a new symbol
+	ld bc,(symbolSearchLen)
+	call NewSymbol
+	push hl
+	 push de
+	  dec de
+	  dec de
+	  dec de
+	  ld hl,(firstSymbol)
+	  ex de,hl
+	  ld (hl),d
+	  dec hl
+	  ld (hl),e
+	  pop de
+	 ld hl,(symbolSearchMPtr)
+	 ld a,b
+	 or c
+	 jr z,GetNamedSymbol_Empty
+	 ldir
+GetNamedSymbol_Empty:
+	 pop hl
+	ld (firstSymbol),hl
+	ret	

@@ -1,16 +1,21 @@
 TIPACK = tipack
 TPASM = tpasm
-TPASMFLAGS = -I $(HOME)/include/tpasm
+TPASMFLAGS = -I $(HOME)/programs/include/tpasm
 OBJCOPY = objcopy
+STACKER = ../stacker.pl -c
 
-all: testmem.8xp
+all: testmem.8xp testparse.8xp testeval.8xp
 
-testmem.8xp: testmem.bin
-	$(TIPACK) testmem.bin -p -o testmem.8xp
+%.8xp: %.bin
+	$(TIPACK) $< -p -o $@
 
-testmem.bin: testmem.asm *.asm
-	$(TPASM) $(TPASMFLAGS) testmem.asm -o intel testmem.hex -l testmem.lst
-	$(OBJCOPY) -I ihex testmem.hex -O binary testmem.bin
+testparse.8xp: testparse.bin
+	$(TIPACK) testparse.bin -p -o testparse.8xp -n TESTPARS
+
+%.bin: %.asm *.asm
+	$(TPASM) $(TPASMFLAGS) $*.asm -o intel $*.hex -l $*.lst
+	-$(STACKER) $*.asm
+	$(OBJCOPY) -I ihex $*.hex -O binary $*.bin
 
 clean:
-	rm -f testmem.bin testmem.hex testmem.lst testmem.8xp
+	rm -f *.bin *.hex *.lst *.8xp

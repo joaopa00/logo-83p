@@ -1,3 +1,5 @@
+;;; -*- TI-Asm -*-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; List Manipulation Routines
@@ -97,6 +99,94 @@ GetListButfirst_nc:
 	ld h,(hl)
 	ld l,a
 	set 7,h
+	ret
+
+
+;; GetListFirstButfirst:
+;;
+;; Get first and butfirst of a list.
+;;
+;; Input:
+;; - HL = nonempty list
+;;
+;; Output:
+;; - HL = first element of the list
+;; - DE = list with first element removed
+;;
+;; Destroys:
+;; - AF
+
+GetListFirstButfirst:
+	call IsList
+	jp c,TypeAssertionFailed
+	jp z,TypeAssertionFailed
+GetListFirstButfirst_nc:
+	call RefToPointer
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	set 7,d
+	inc hl
+	ld a,(hl)
+	inc hl
+	ld h,(hl)
+	ld l,a
+	ret
+
+
+
+;; SetListFirst:
+;;
+;; Set first element of a list.
+;;
+;; Input:
+;; - HL = nonempty list
+;; - DE = new first element
+;;
+;; Destroys:
+;; - AF, HL
+
+SetListFirst:
+	call IsList
+	jp c,TypeAssertionFailed
+	jp z,TypeAssertionFailed
+SetListFirst_nc:
+	call RefToPointer
+	inc hl
+	inc hl
+	ld (hl),e
+	inc hl
+	ld (hl),d
+	ret
+
+
+;; SetListButfirst:
+;;
+;; Set butfirst of a list.
+;;
+;; Input:
+;; - HL = nonempty list
+;; - DE = new butfirst
+;;
+;; Destroys:
+;; - AF, HL
+
+SetListButfirst:
+	call IsList
+	jp c,TypeAssertionFailed
+	jp z,TypeAssertionFailed
+	bit 7,d
+	jp z,TypeAssertionFailed
+	bit 1,e
+	jp z,TypeAssertionFailed
+SetListButirst_nc:
+	call RefToPointer
+	ld (hl),e
+	inc hl
+	ld a,(currentGCFlag)
+	xor d
+	xor 80h
+	ld (hl),a
 	ret
 
 

@@ -1,3 +1,5 @@
+;;; -*- TI-Asm -*-
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Stack Management
@@ -35,6 +37,7 @@ PushOPS:
 PushOPS_OutOfMem:
 	  ;; [GC]
 	  BCALL _ErrMemory
+	  ;; UNREACHABLE
 
 ;; PopOPS:
 ;;
