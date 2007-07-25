@@ -245,14 +245,14 @@ ParseBuffer_EOF:
 	ld hl,(parseParent)
 	call GetListFirstButfirst
 	push hl
-	 push de
-	  ld hl,(parseParent)
-	  call FreeNode
-	  pop de
 	 ld hl,emptyNode
 	 or a
 	 sbc hl,de
 	 jr nz,ParseBuffer_Error
+	 push de
+	  ld hl,(parseParent)
+	  call FreeNode
+	  pop de
 	 ld hl,0
 	 ld (parseParent),hl	; discard old refs
 	 ld (parseCurrent),hl

@@ -15,7 +15,9 @@
 	ld hl,ErrH
 	call APP_PUSH_ERRORH
 
-Loop:	call GetS
+Loop:	ld hl,(OPBase)
+	ld (minOPS),hl
+	call GetS
 	jr c,Quit
 	push hl
 	 BCALL _RunIndicOn
@@ -30,6 +32,20 @@ Loop:	call GetS
 	 BCALL _RunIndicOff
 	 pop hl
 	call Display
+	BCALL _NewLine
+	ld hl,(OPBase)
+	ld de,(OPS)
+	or a
+	sbc hl,de
+	BCALL _DispHL
+	ld hl,(OPBase)
+	ld de,(minOPS)
+	or a
+	sbc hl,de
+	BCALL _DispHL
+	ld hl,500
+	add hl,sp
+	BCALL _DispHL
 	BCALL _NewLine
 	jr Loop
 

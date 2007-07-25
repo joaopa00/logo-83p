@@ -481,6 +481,7 @@ GetWordChars_Prefix:
 	jr GetWordChars	
 
 GetWordChars_Integer:
+	or a
 	ld bc,-10000
 	call GetWordChars_Integer_Digit
 	ld bc,-1000
@@ -496,16 +497,101 @@ GetWordChars_Integer:
 	ret
 
 GetWordChars_Integer_Digit:
-	ld a,L0-1
+	push af
+	 ld a,L0-1
 GetWordChars_Integer_DigitLoop:
-	add hl,bc
-	inc a
-	jr c,GetWordChars_Integer_DigitLoop
-	sbc hl,bc
+	 add hl,bc
+	 inc a
+	 jr c,GetWordChars_Integer_DigitLoop
+	 sbc hl,bc
+	 pop bc
+	rr c
+	jr c,GetWordChars_Integer_NoHide0
 	cp L0
 	ret z
+	scf
+GetWordChars_Integer_NoHide0:
 	ld (de),a
 	inc de
+	ret
+
+
+;; WordToSymbol:
+;;
+;; Convert given word into a symbol.
+;;
+;; Input:
+;; - HL = word
+;;
+;; Output:
+;; - HL = symbol
+;; - CF set for conversion error
+;;
+;; Destroys:
+;; - AF
+
+WordToSymbol:
+	call IsWord
+	ret c
+WordToSymbol_nc:
+	call GetType
+	cp T_SYMBOL
+	ret z
+	push de
+	 push bc
+	  cp T_INT
+	  jr z,WordToSymbol_Short
+	  cp T_REAL
+	  jr z,WordToSymbol_Short
+	  cp T_COMPLEX
+	  jr z,WordToSymbol_Short
+	  cp T_CHAR
+	  jr z,WordToSymbol_Short
+	  cp T_STRING
+	  jr z,WordToSymbol_String
+ warning "FIXME: how to quickly symbolize a quote, colon, or paged string?"
+;	cp T_QUOTE
+;	jr z,WordToSymbol_Quote
+;	cp T_COLON
+;	jr z,WordToSymbol_Colon
+WordToSymbol_Error:
+	  pop bc
+	 pop de
+	scf
+	ret
+
+WordToSymbol_Short:
+	  ld de,OP3
+	  push de
+	   call GetWordChars
+	   ex de,hl
+	   pop de
+	  or a
+	  sbc hl,de
+	  ld b,h
+	  ld c,l
+	  ex de,hl
+	  call GetNamedSymbol
+	  pop bc
+	 pop de
+	or a
+	ret
+
+WordToSymbol_String:
+	  call GetNodeContents
+ ifndef NO_PAGED_MEM
+	  ld a,b
+	  or a
+	  jr nz,WordToSymbol_Error
+ endif
+	  ld c,(hl)
+	  inc hl
+	  ld b,(hl)
+	  inc hl
+	  call GetNamedSymbol
+	  pop bc
+	 pop de
+	or a
 	ret
 
 
@@ -556,6 +642,69 @@ GetSymbolVariable_nc:
 	INC_BHL
 	INC_BHL
 	LOAD_HL_iBHL
+	ret
+
+
+;; SetSymbolProcedure:
+;;
+;; Set the procedure definition associated with a symbol.
+;;
+;; Input:
+;; - HL = symbol
+;; - DE = new value
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+
+SetSymbolProcedure:
+	bit 7,h
+	jp z,TypeAssertionFailed
+	ex de,hl
+	call GetType
+	cp T_SUBR
+	jr z,SetSymbolProcedure_OK
+	cp T_LIST
+	jp nz,TypeAssertionFailed
+	push hl
+	 call GetListFirst
+	 call IsList
+	 pop hl
+	jp c,TypeAssertionFailed
+SetSymbolProcedure_OK:
+	ex de,hl
+SetSymbolProcedure_nc:
+	push de
+	 call GetNodeContents
+	 pop de
+	cp T_SYMBOL<<2
+	jp nz,TypeAssertionFailed
+	LOAD_iBHL_DE
+	ret
+
+
+;; SetSymbolVariable:
+;;
+;; Set the variable value associated with a symbol.
+;;
+;; Input:
+;; - HL = symbol
+;; - DE = new value
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+
+SetSymbolVariable:
+	bit 7,h
+	jp z,TypeAssertionFailed
+SetSymbolVariable_nc:
+	push de
+	 call GetNodeContents
+	 pop de
+	cp T_SYMBOL<<2
+	jp nz,TypeAssertionFailed
+	INC_BHL
+	INC_BHL
+	LOAD_iBHL_DE
 	ret
 
 
