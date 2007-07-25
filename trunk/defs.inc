@@ -21,6 +21,27 @@ NO_BYTE_CARRY macro startaddr
 	list
 	.endm
 
+SYMBOL macro proc,var,plist,next,name
+	dw proc,var,plist,next,(.strlen. name)
+	db name
+	.endm
+
+NODE macro type,page,addr
+	db type<<2, page
+	dw addr
+	.endm
+
+BUILTIN_PRIMITIVE macro dflt,min,max,typestr
+	db 1, dflt, min, max
+	dw 0
+ if (.strlen. typestr) > 0
+	call CheckInputTypes
+	;; UNREACHABLE
+	db typestr
+ endif
+	.endm
+
+
 NO_PAGED_MEM equ 1
 
  ifdef NO_PAGED_MEM
@@ -44,6 +65,12 @@ LOAD_DE_iBHL macro
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
+	.endm
+
+LOAD_iBHL_DE macro
+	ld (hl),e
+	inc hl
+	ld (hl),d
 	.endm
 
 INC_BHL macro
@@ -71,7 +98,11 @@ LOAD_HL_iBHL macro
 LOAD_DE_iBHL macro
 	call Load_DE_iBHL
 	.endm
-	
+
+LOAD_iBHL_DE macro
+	call Load_iBHL_DE
+	.endm
+
 INC_BHL macro
 	call Inc_BHL
 	.endm
@@ -101,23 +132,37 @@ freeNodeList:		ds 2
 freeNodePairList:	ds 2
 freeNodeQuadList:	ds 2
 firstSymbol:		ds 2
+mainSP:			ds 2
+evalProcTop:		ds 2
+
+refDataStart:
+
 evalList:		ds 2
-evalCurrentProc:	ds 2
-evalNumArgs:		ds 2
-evalRemainingArgs:	ds 2
+evalRunningProc:	ds 2
 
 savedDataSize equ $ - savedData
-	
+
 parseParent:		ds 2
 parseCurrent:		ds 2
 symbolSearchLen:
 newSymbol:		ds 2
+evalNextProc:		ds 2
+evalNumArgs:		ds 2
+evalContext:		ds 2
+currentSubr:		ds 2
+subrStartAddr:		ds 2
+
+refDataSize equ $ - refDataStart
+
+STACK_DEBUG equ 1
+minOPS:			ds 2
 
 appvarStartMPtr		equ iMathPtr1 ; global
 newObjectMPtr		equ iMathPtr2 ; used when creating object
 parseBufferMPtr		equ iMathPtr3 ; used by parser
-symbolSearchMPtr	equ imathptr4 ; used when creating symbols
+symbolSearchMPtr	equ iMathPtr4 ; used when creating symbols
 
+subrExecMem		equ appBackUpScreen
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -164,6 +209,11 @@ T_INT		equ 29		; Integer
 NODE_MEM_INCREMENT equ 256
 
 ;;; Evaluation contexts
+
+;;; Note: the evaluator assumes that these three are the only special
+;;; contexts.  Also, EvalTail assumes that VOID & OPTIONAL = VOID.
+
 CONTEXT_OPTIONAL  equ -1	; Single value allowed, or void
 CONTEXT_VOID      equ -2	; Only void procedures allowed
 CONTEXT_PAREN     equ -3	; Inside parentheses
+

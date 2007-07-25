@@ -2,6 +2,7 @@
 
  include "mem.asm"
  include "nodes.asm"
+ include "gc.asm"
  include "types.asm"
  include "list.asm"
  include "objects.asm"
@@ -11,6 +12,11 @@
  include "stack.asm"
  include "proc.asm"
  include "eval.asm"
- include "primitives.asm"
+ include "p-cntrl.asm"
+ include "p-data.asm"
+ include "p-logic.asm"
+ include "p-math.asm"
+ include "p-worksp.asm"
+
  include "assert.asm"
  include "data.asm"

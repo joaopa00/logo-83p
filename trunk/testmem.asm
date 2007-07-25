@@ -157,6 +157,8 @@ KeyLoop:
 	jr z,ParseSomething
 	cp kCapF
 	jr z,FreeSomething
+	cp kCapG
+	jr z,RunGC
 	jr KeyLoop
 	
 Left:	ld hl,(selectedNode)
@@ -224,6 +226,13 @@ FreeSomething:
 
 FreeOnlyNode:
 	call FreeNode
+	jr Proceed
+
+RunGC:
+	ld hl,(selectedNode)
+	push hl
+	 call GCQuick
+	 pop hl
 	jr Proceed
 
 GetS:
