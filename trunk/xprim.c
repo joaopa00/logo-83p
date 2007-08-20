@@ -144,7 +144,9 @@ int main(int argc, char** argv)
 	      "TRUE_Sym: SYMBOL voidNode, voidNode,"
 	      " voidNode, falseNode, \"TRUE\"\n"
 	      "FALSE_Sym: SYMBOL voidNode, voidNode,"
-	      " voidNode, %s_Node0, \"FALSE\"\n",
+	      " voidNode, endNode, \"FALSE\"\n"
+	      "END_Sym: SYMBOL voidNode, voidNode,"
+	      " voidNode, %s_Node0, \"END\"\n",
 	      prims[0].symnames[0]);
 
       for (i = 0; i < nprims; i++) {
@@ -164,6 +166,7 @@ int main(int argc, char** argv)
     else if (!strncmp(buf, "@XPRIM-SYM-NODES@", 17)) {
       fprintf(outf, "trueNode:       NODE T_SYMBOL, 0, TRUE_Sym\n");
       fprintf(outf, "falseNode:      NODE T_SYMBOL, 0, FALSE_Sym\n");
+      fprintf(outf, "endNode:        NODE T_SYMBOL, 0, END_Sym\n");
       for (i = 0; i < nprims; i++) {
 	for (j = 0; j < prims[i].nsymnames; j++) {
 	  fprintf(outf, "%s_Node%d: NODE T_SYMBOL, 0, %s_Sym%d\n",

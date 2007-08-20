@@ -6,6 +6,75 @@
 ;;;
 
 
+;; ParseUserInput:
+;;
+;; Parse an input string from the user.  If it is incomplete (contains
+;; brackets that are not closed), read additional lines until it is
+;; complete.
+;;
+;; Input:
+;; - HL = address of string
+;; - BC = length of string
+;;
+;; Output:
+;; - HL = result of parsing
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+;; - appBackUpScreen
+
+ParseUserInput:
+	ld de,ParseUserInput_Callback
+	jr ParseWithCallback
+
+ParseUserInput_Callback:
+	ld a,Lellipsis
+	call PutC
+	BCALL _RunIndicOff
+	ld hl,appBackUpScreen
+	ld bc,768
+	call GetS
+	BCALL _RunIndicOn
+	call NewLine
+	jr c,ParseUserInput_CallbackError
+	BCALL _StrLength
+	ret
+ParseUserInput_CallbackError:
+ParseBuffer_ErrorLBrack:
+	ld hl,EMsg_TooManyLBracks
+	ld a,E_Syntax
+	jp ThrowError
+
+
+;; ParseFileInput:
+;;
+;; Parse an input string read from a file.  If it is incomplete, read
+;; additional lines until it is complete.
+;;
+;; Input:
+;; - HL = address of string
+;; - BC = length of string
+;;
+;; Output:
+;; - HL = result of parsing
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+;; - appBackUpScreen
+
+ParseFileInput:
+	ld de,ParseFileInput_Callback
+	jr ParseWithCallback
+
+ParseFileInput_Callback:
+	ld hl,appBackUpScreen
+	ld bc,768
+	call GetS_FileReadTIOS
+	jr c,ParseBuffer_ErrorLBrack
+	BCALL _StrLength
+	ret
+
+
 ;; ParseBuffer:
 ;;
 ;; Parse a text string stored in RAM.
@@ -21,6 +90,9 @@
 ;; - AF, BC, DE, HL
 
 ParseBuffer:
+	ld de,ParseBuffer_ErrorLBrack
+ParseWithCallback:
+	ld (parseCallback),de
 	ld (parseBufferMPtr),hl
 	push bc
 
@@ -37,6 +109,8 @@ ParseBuffer_Loop1:
 	 pop bc
 	ld hl,(parseBufferMPtr)
 ParseBuffer_Loop:
+	bit onInterrupt,(iy+onFlags)
+	jp nz,ErrBreak
 	ld a,b
 	or c
 	jp z,ParseBuffer_EOF
@@ -49,6 +123,10 @@ ParseBuffer_Loop:
 	jr z,ParseBuffer_Loop
 	cp Lenter
 	jr z,ParseBuffer_Loop
+
+	;; Skip comments
+	cp Lsemicolon
+	jp z,ParseBuffer_Semicolon
 
 	;; Brackets are special
 	cp LlBrack
@@ -89,42 +167,51 @@ ParseBuffer_WC:
 	;; find out how long it is.
 
 	push hl			; save address of first char + 1
-	 ld de,1		; DE = number of characters
-	 jr ParseBuffer_WordLoop
+	 ld de,0		; DE = number of characters
+	 jr ParseBuffer_WordFirstChar
 
+ParseBuffer_WordVBarBackslash:
+	 ld a,b
+	 or c
+	 jr z,ParseBuffer_WordEOF
+	 inc hl
+	 dec bc
 ParseBuffer_WordVBarLoop:
 	 inc de
 ParseBuffer_WordVBar:
-	 inc hl
-	 dec bc
 	 ld a,b
 	 or c
-	 jr z,ParseBuffer_WordDone
+	 jr z,ParseBuffer_WordEOF
 	 ld a,(hl)
+	 inc hl
+	 dec bc
+	 cp Lbackslash
+	 jr z,ParseBuffer_WordVBarBackslash
 	 cp Lbar
 	 jr nz,ParseBuffer_WordVBarLoop
 	 jr ParseBuffer_WordCharNotIncluded
 
 ParseBuffer_WordBackslash:
-	 inc hl
-	 dec bc
 	 ld a,b
 	 or c
-	 jr z,ParseBuffer_WordDone
+	 jr z,ParseBuffer_WordEOF
+	 inc hl
+	 dec bc
 ParseBuffer_WordChar:
 	 inc de
 ParseBuffer_WordCharNotIncluded:
-	 inc hl
-	 dec bc
-ParseBuffer_WordLoop:
 	 ld a,b
 	 or c
-	 jr z,ParseBuffer_WordDone
+	 jr z,ParseBuffer_WordEOF
 	 ld a,(hl)
-
+	 inc hl
+	 dec bc
+ParseBuffer_WordFirstChar:
 	 cp Lspace
 	 jr z,ParseBuffer_WordDone
 	 cp Lenter
+	 jr z,ParseBuffer_WordDone
+	 cp Lsemicolon
 	 jr z,ParseBuffer_WordDone
 	 cp LlBrack
 	 jr z,ParseBuffer_WordDone
@@ -152,6 +239,10 @@ ParseBuffer_WordLoop:
 	 cp '.'
 	 jr z,ParseBuffer_WordChar
 ParseBuffer_WordDone:
+	;; "unget" the last character we read
+	 dec hl
+	 inc bc
+ParseBuffer_WordEOF:
 	 ld (parseBufferMPtr),hl
 	 pop hl
 	dec hl
@@ -162,12 +253,10 @@ ParseBuffer_WordDone:
 	  add hl,de
 	  ld bc,(parseBufferMPtr)
 	  sbc hl,bc
+	  ld a,h
+	  or l
 	  pop hl
-	 jr z,ParseBuffer_NoEscapes
-	 call ParseEscapedWord
-	 jr ParseBuffer_GotWord
-ParseBuffer_NoEscapes:
-	 call ParseUnescapedWord
+	 call ParseQuotedWord
 ParseBuffer_GotWord:
 	 ;; HL = value that we want to add onto the end of the current list.
 	 ld de,emptyNode
@@ -237,9 +326,22 @@ ParseBuffer_RBrack:
 	 or a
 	 sbc hl,de
 	 jp nz,ParseBuffer_Loop1
-ParseBuffer_Error:
-	 BCALL _ErrSyntax
+
+	 ld hl,EMsg_UnexpectedRBrack
+	 ld a,E_Syntax
+	 call ThrowError
 	 ;; UNREACHABLE
+
+ParseBuffer_Semicolon:
+	ld a,b
+	or c
+	jr z,ParseBuffer_EOF
+	ld a,(hl)
+	inc hl
+	dec bc
+	cp Lenter
+	jr nz,ParseBuffer_Semicolon
+	jp ParseBuffer_Loop
 
 ParseBuffer_EOF:
 	ld hl,(parseParent)
@@ -248,7 +350,7 @@ ParseBuffer_EOF:
 	 ld hl,emptyNode
 	 or a
 	 sbc hl,de
-	 jr nz,ParseBuffer_Error
+	 jr nz,ParseBuffer_ReadMore
 	 push de
 	  ld hl,(parseParent)
 	  call FreeNode
@@ -259,15 +361,23 @@ ParseBuffer_EOF:
 	 pop hl
 	ret
 
+ParseBuffer_ReadMore:
+	 pop hl
+	ld hl,ParseBuffer_Loop
+	push hl
+	 ld hl,(parseCallback)
+	 jp (hl)
 
-;; ParseUnescapedWord:
+
+;; ParseQuotedWord:
 ;;
-;; Convert a text string to a word, without handling any escape
-;; sequences.
+;; Convert a text string, with optional leading quotes, to a word.
 ;;
 ;; Input:
 ;; - HL = address of first character
 ;; - DE = length of word
+;; - A = 0 to ignore backslash/vertical bar escapes; nonzero to
+;;   interpret escapes.
 ;;
 ;; Output:
 ;; - HL = word
@@ -275,31 +385,32 @@ ParseBuffer_EOF:
 ;; Destroys:
 ;; - AF, BC, DE, HL
 
-ParseUnescapedWord:
-ParseEscapedWord:
+ParseQuotedWord:
 	or a
 	ld bc,(parseBufferMPtr)
 	sbc hl,bc
 	push hl			; save offset to first character
 	 add hl,bc
 	 push de
-	  ;; Skip over initial quotes/colons
-ParseUnescapedWord_InitialQuotesLoop:
-	  ld a,d
-	  or e
-	  jr z,ParseUnescapedWord_InitialQuotesDone
-	  ld a,(hl)
-	  cp Lquote
-	  jr z,ParseUnescapedWord_InitialQuote
-	  cp Lcolon
-	  jr nz,ParseUnescapedWord_InitialQuotesDone
-ParseUnescapedWord_InitialQuote:
-	  inc hl
-	  dec de
-	  jr ParseUnescapedWord_InitialQuotesLoop
-ParseUnescapedWord_InitialQuotesDone:
-	  ld b,d
-	  ld c,e
+	  push af
+	   ;; Skip over initial quotes/colons
+ParseQuotedWord_InitialQuotesLoop:
+	   ld a,d
+	   or e
+	   jr z,ParseQuotedWord_InitialQuotesDone
+	   ld a,(hl)
+	   cp Lquote
+	   jr z,ParseQuotedWord_InitialQuote
+	   cp Lcolon
+	   jr nz,ParseQuotedWord_InitialQuotesDone
+ParseQuotedWord_InitialQuote:
+	   inc hl
+	   dec de
+	   jr ParseQuotedWord_InitialQuotesLoop
+ParseQuotedWord_InitialQuotesDone:
+	   ld b,d
+	   ld c,e
+	   pop af
 	  push bc
 	   call ParseSimpleWord
 	   pop bc
@@ -317,7 +428,11 @@ ParseUnescapedWord_InitialQuotesDone:
 	dec hl
 	ex de,hl
 	ld hl,(newSymbol)
-ParseUnescapedWord_AddQuotes:
+	push hl
+	 ld hl,0
+	 ld (newSymbol),hl
+	 pop hl
+ParseQuotedWord_AddQuotes:
 	ld a,b
 	or c
 	ret z
@@ -325,21 +440,26 @@ ParseUnescapedWord_AddQuotes:
 	dec de
 	dec bc
 	cp Lcolon
-	jr z,ParseUnescapedWord_AddColon
+	jr z,ParseQuotedWord_AddColon
 	call NewQuote
-	jr ParseUnescapedWord_AddQuotes
-ParseUnescapedWord_AddColon:
+	jr ParseQuotedWord_AddQuotes
+ParseQuotedWord_AddColon:
 	call NewColon
-	jr ParseUnescapedWord_AddQuotes
+	jr ParseQuotedWord_AddQuotes
+
 
 ;; ParseSimpleWord:
 ;;
-;; Convert a text string to a word, without handling any escape
-;; sequences or quotes.
+;; Convert a text string to a word, without handling quotes.  If
+;; backslashes or vertical bars are included, the result will be a
+;; string object.  If not, the result will be either a number or a
+;; symbol object.
 ;;
 ;; Input:
 ;; - HL = address of first character
 ;; - BC = length of word
+;; - A = 0 to ignore backslash/vertical bar escapes; nonzero to
+;;   interpret escapes.
 ;;
 ;; Output:
 ;; - HL = word
@@ -348,6 +468,8 @@ ParseUnescapedWord_AddColon:
 ;; - AF, BC, DE
 
 ParseSimpleWord:
+	or a
+	jr nz,ParseSimpleWord_Escaped
 	ld a,b
 	or c
 	jp z,GetNamedSymbol
@@ -397,4 +519,38 @@ ParseSimpleWord_IntDone:
 	  jr nz,ParseSimpleWord_IntOverflow
 	  pop af
 	 pop af
+	ret
+
+ParseSimpleWord_Escaped:
+	ld de,(parseBufferMPtr)
+	sbc hl,de
+	push hl
+	 call NewString
+	 ex (sp),hl
+	 push de
+	  ld de,(parseBufferMPtr)
+	  add hl,de
+	  pop de
+	 jr ParseSimpleWord_EscapedLoop
+
+ParseSimpleWord_EscapedCopy:
+	 ldi
+ParseSimpleWord_EscapedLoop:
+	 ld a,b
+	 or c
+	 jr z,ParseSimpleWord_EscapedDone
+	 ld a,(hl)
+	 cp Lbar
+	 jr z,ParseSimpleWord_EscapedVBar
+	 cp Lbackslash
+	 jr nz,ParseSimpleWord_EscapedCopy
+	 inc hl
+	 jr ParseSimpleWord_EscapedCopy
+
+ParseSimpleWord_EscapedVBar:
+	 inc hl
+	 jr ParseSimpleWord_EscapedLoop
+
+ParseSimpleWord_EscapedDone:
+	 pop hl
 	ret

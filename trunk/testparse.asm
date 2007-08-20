@@ -13,7 +13,10 @@
 	BCALL _RunIndicOff
 	call OpenWorkspace
 
-Loop:	call GetS
+Loop:
+	ld hl,appBackUpScreen
+	ld bc,768
+	call GetS_Console
 	ret c
 	push hl
 	 BCALL _RunIndicOn
@@ -30,81 +33,81 @@ Loop:	call GetS
 	BCALL _NewLine
 	jr Loop
 
-GetS:	ld hl,appBackUpScreen
-GetS_Loop:
-	push hl
-	 BCALL _CursorOn
-	 res onInterrupt,(iy+onFlags)
-	 BCALL _GetKey
-	 push af
-	  BCALL _CursorOff
-	  pop af
-	 pop hl
-	cp kLeft
-	jr z,GetS_Del
-	cp kDel
-	jr z,GetS_Del
-	cp kEnter
-	jr z,GetS_Done
-	cp kQuit
-	scf
-	ret z
-	cp EchoStart
-	jr c,GetS_Loop
-	ld e,a
-	cp 0FCh
-	jr c,GetS_1B
-	ld d,a
-	ld a,(keyExtend)
-	ld e,a
-GetS_1B:
-	push hl
-	 BCALL _KeyToString
-	 inc hl
-	 ld a,(hl)
-	 pop hl
-	ld (hl),a
-	inc hl
-	BCALL _PutC
-	jr GetS_Loop
-GetS_Done:
-	ld (hl),0
-	ld hl,appBackUpScreen
-	ret
+; GetS:	ld hl,appBackUpScreen
+; GetS_Loop:
+; 	push hl
+; 	 BCALL _CursorOn
+; 	 res onInterrupt,(iy+onFlags)
+; 	 BCALL _GetKey
+; 	 push af
+; 	  BCALL _CursorOff
+; 	  pop af
+; 	 pop hl
+; 	cp kLeft
+; 	jr z,GetS_Del
+; 	cp kDel
+; 	jr z,GetS_Del
+; 	cp kEnter
+; 	jr z,GetS_Done
+; 	cp kQuit
+; 	scf
+; 	ret z
+; 	cp EchoStart
+; 	jr c,GetS_Loop
+; 	ld e,a
+; 	cp 0FCh
+; 	jr c,GetS_1B
+; 	ld d,a
+; 	ld a,(keyExtend)
+; 	ld e,a
+; GetS_1B:
+; 	push hl
+; 	 BCALL _KeyToString
+; 	 inc hl
+; 	 ld a,(hl)
+; 	 pop hl
+; 	ld (hl),a
+; 	inc hl
+; 	BCALL _PutC
+; 	jr GetS_Loop
+; GetS_Done:
+; 	ld (hl),0
+; 	ld hl,appBackUpScreen
+; 	ret
 	
-GetS_Del:
-	ld a,(curCol)
-	or a
-	jr z,GetS_Del_LeftEdge
-	dec a
-GetS_Del_Done:
-	dec hl
-	ld (curCol),a
-	ld a,' '
-	BCALL _PutMap
-	jr GetS_Loop
-GetS_Del_LeftEdge:
-	ld a,h
-	cp high(appBackUpScreen)
-	jr nz,GetS_Del_LeftEdge_OK
-	ld a,l
-	cp low(appBackUpScreen)
-	jr z,GetS_Loop
-GetS_Del_LeftEdge_OK:
-	ld a,(curRow)
-	or a
-	jr z,GetS_Del_TopLeft
-	dec a
-	ld (curRow),a
-GetS_Del_LeftEdge_Done:
-	ld a,15
-	jr GetS_Del_Done
-GetS_Del_TopLeft:
-	ld (hl),0
-	ld bc,-16
-	add hl,bc
-	BCALL _PutS
-	jr GetS_Del_LeftEdge_Done
+; GetS_Del:
+; 	ld a,(curCol)
+; 	or a
+; 	jr z,GetS_Del_LeftEdge
+; 	dec a
+; GetS_Del_Done:
+; 	dec hl
+; 	ld (curCol),a
+; 	ld a,' '
+; 	BCALL _PutMap
+; 	jr GetS_Loop
+; GetS_Del_LeftEdge:
+; 	ld a,h
+; 	cp high(appBackUpScreen)
+; 	jr nz,GetS_Del_LeftEdge_OK
+; 	ld a,l
+; 	cp low(appBackUpScreen)
+; 	jr z,GetS_Loop
+; GetS_Del_LeftEdge_OK:
+; 	ld a,(curRow)
+; 	or a
+; 	jr z,GetS_Del_TopLeft
+; 	dec a
+; 	ld (curRow),a
+; GetS_Del_LeftEdge_Done:
+; 	ld a,15
+; 	jr GetS_Del_Done
+; GetS_Del_TopLeft:
+; 	ld (hl),0
+; 	ld bc,-16
+; 	add hl,bc
+; 	BCALL _PutS
+; 	jr GetS_Del_LeftEdge_Done
 
 Display:
 	ld bc,0			; indentation level

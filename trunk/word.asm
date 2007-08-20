@@ -394,6 +394,7 @@ GetWordChar_Integer:
 	ccf
 	ret c
 	add hl,de
+	or a
 	ld a,(hl)
 	ret
 

@@ -18,19 +18,19 @@ workspaceTemplate:
 	dw wst_userNodeStart-2	; userNodeStartMinus2
 	dw workspaceTemplateSize; uninitNodeStart
 	dw workspaceTemplateSize; uninitNodeEnd
-	db 0			; currentGCFlag
+	db 0			; gcGenState
 	dw 0			; freeNodeList
 	dw 0			; freeNodePairList
 	dw 0			; freeNodeQuadList
 	dw trueNode		; firstSymbol
+	dw GetChar_Console	; getCharFunc
+	dw GetS_Console		; getSFunc
 	dw 0			; mainSP
 	dw 0			; evalProcTop
-	dw 0			; evalList
-	dw 0			; evalRunningProc
+	dw voidNode		; evalList
+	dw voidNode		; evalRunningProc
 
 	;; Object area
-
-@XPRIM-OBJECTS@
 
 	;; Node table
 
@@ -38,7 +38,6 @@ wst_userNodeStart:
 
                 rorg $8002
 emptyNode:      NODE T_EMPTY, 0, 0
-@XPRIM-SYM-NODES@
                 rorg $$
 
 workspaceTemplateSize equ $ - workspaceTemplate
@@ -47,5 +46,8 @@ workspaceTemplateSize equ $ - workspaceTemplate
 builtinNodeStart:
                   rorg $8000
 voidNode:         NODE T_VOID, 0, 0
+@XPRIM-SYM-NODES@
 @XPRIM-SUBR-NODES@
                   rorg $$
+
+@XPRIM-OBJECTS@

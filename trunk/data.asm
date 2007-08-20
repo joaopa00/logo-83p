@@ -19,46 +19,19 @@ workspaceTemplate:
 	dw wst_userNodeStart-2	; userNodeStartMinus2
 	dw workspaceTemplateSize; uninitNodeStart
 	dw workspaceTemplateSize; uninitNodeEnd
-	db 0			; currentGCFlag
+	db 0			; gcGenState
 	dw 0			; freeNodeList
 	dw 0			; freeNodePairList
 	dw 0			; freeNodeQuadList
 	dw trueNode		; firstSymbol
+	dw GetChar_Console	; getCharFunc
+	dw GetS_Console		; getSFunc
 	dw 0			; mainSP
 	dw 0			; evalProcTop
-	dw 0			; evalList
-	dw 0			; evalRunningProc
+	dw voidNode		; evalList
+	dw voidNode		; evalRunningProc
 
 	;; Object area
-
-TRUE_Sym: SYMBOL voidNode, voidNode, voidNode, falseNode, "TRUE"
-FALSE_Sym: SYMBOL voidNode, voidNode, voidNode, RUN_Node0, "FALSE"
-RUN_Sym0: SYMBOL RUN_Subr, voidNode, voidNode, IF_Node0, "RUN"
-IF_Sym0: SYMBOL IF_Subr, voidNode, voidNode, IFELSE_Node0, "IF"
-IFELSE_Sym0: SYMBOL IFELSE_Subr, voidNode, voidNode, REPEAT_Node0, "IFELSE"
-REPEAT_Sym0: SYMBOL REPEAT_Subr, voidNode, voidNode, STOP_Node0, "REPEAT"
-STOP_Sym0: SYMBOL STOP_Subr, voidNode, voidNode, OUTPUT_Node0, "STOP"
-OUTPUT_Sym0: SYMBOL OUTPUT_Subr, voidNode, voidNode, OUTPUT_Node1, "OUTPUT"
-OUTPUT_Sym1: SYMBOL OUTPUT_Subr, voidNode, voidNode, FPUT_Node0, "OP"
-FPUT_Sym0: SYMBOL FPUT_Subr, voidNode, voidNode, FIRST_Node0, "FPUT"
-FIRST_Sym0: SYMBOL FIRST_Subr, voidNode, voidNode, BUTFIRST_Node0, "FIRST"
-BUTFIRST_Sym0: SYMBOL BUTFIRST_Subr, voidNode, voidNode, BUTFIRST_Node1, "BUTFIRST"
-BUTFIRST_Sym1: SYMBOL BUTFIRST_Subr, voidNode, voidNode, COUNT_Node0, "BF"
-COUNT_Sym0: SYMBOL COUNT_Subr, voidNode, voidNode, ITEM_Node0, "COUNT"
-ITEM_Sym0: SYMBOL ITEM_Subr, voidNode, voidNode, AND_Node0, "ITEM"
-AND_Sym0: SYMBOL AND_Subr, voidNode, voidNode, OR_Node0, "AND"
-OR_Sym0: SYMBOL OR_Subr, voidNode, voidNode, NOT_Node0, "OR"
-NOT_Sym0: SYMBOL NOT_Subr, voidNode, voidNode, SUM_Node0, "NOT"
-SUM_Sym0: SYMBOL SUM_Subr, voidNode, voidNode, DIFFERENCE_Node0, "SUM"
-DIFFERENCE_Sym0: SYMBOL DIFFERENCE_Subr, voidNode, voidNode, PRODUCT_Node0, "DIFFERENCE"
-PRODUCT_Sym0: SYMBOL PRODUCT_Subr, voidNode, voidNode, QUOTIENT_Node0, "PRODUCT"
-QUOTIENT_Sym0: SYMBOL QUOTIENT_Subr, voidNode, voidNode, LESSP_Node0, "QUOTIENT"
-LESSP_Sym0: SYMBOL LESSP_Subr, voidNode, voidNode, LESSP_Node1, "LESSP"
-LESSP_Sym1: SYMBOL LESSP_Subr, voidNode, voidNode, GREATERP_Node0, "LESS?"
-GREATERP_Sym0: SYMBOL GREATERP_Subr, voidNode, voidNode, GREATERP_Node1, "GREATERP"
-GREATERP_Sym1: SYMBOL GREATERP_Subr, voidNode, voidNode, MAKE_Node0, "GREATER?"
-MAKE_Sym0: SYMBOL MAKE_Subr, voidNode, voidNode, DEFINE_Node0, "MAKE"
-DEFINE_Sym0: SYMBOL DEFINE_Subr, voidNode, voidNode, 0, "DEFINE"
 
 	;; Node table
 
@@ -66,34 +39,6 @@ wst_userNodeStart:
 
                 rorg $8002
 emptyNode:      NODE T_EMPTY, 0, 0
-trueNode:       NODE T_SYMBOL, 0, TRUE_Sym
-falseNode:      NODE T_SYMBOL, 0, FALSE_Sym
-RUN_Node0: NODE T_SYMBOL, 0, RUN_Sym0
-IF_Node0: NODE T_SYMBOL, 0, IF_Sym0
-IFELSE_Node0: NODE T_SYMBOL, 0, IFELSE_Sym0
-REPEAT_Node0: NODE T_SYMBOL, 0, REPEAT_Sym0
-STOP_Node0: NODE T_SYMBOL, 0, STOP_Sym0
-OUTPUT_Node0: NODE T_SYMBOL, 0, OUTPUT_Sym0
-OUTPUT_Node1: NODE T_SYMBOL, 0, OUTPUT_Sym1
-FPUT_Node0: NODE T_SYMBOL, 0, FPUT_Sym0
-FIRST_Node0: NODE T_SYMBOL, 0, FIRST_Sym0
-BUTFIRST_Node0: NODE T_SYMBOL, 0, BUTFIRST_Sym0
-BUTFIRST_Node1: NODE T_SYMBOL, 0, BUTFIRST_Sym1
-COUNT_Node0: NODE T_SYMBOL, 0, COUNT_Sym0
-ITEM_Node0: NODE T_SYMBOL, 0, ITEM_Sym0
-AND_Node0: NODE T_SYMBOL, 0, AND_Sym0
-OR_Node0: NODE T_SYMBOL, 0, OR_Sym0
-NOT_Node0: NODE T_SYMBOL, 0, NOT_Sym0
-SUM_Node0: NODE T_SYMBOL, 0, SUM_Sym0
-DIFFERENCE_Node0: NODE T_SYMBOL, 0, DIFFERENCE_Sym0
-PRODUCT_Node0: NODE T_SYMBOL, 0, PRODUCT_Sym0
-QUOTIENT_Node0: NODE T_SYMBOL, 0, QUOTIENT_Sym0
-LESSP_Node0: NODE T_SYMBOL, 0, LESSP_Sym0
-LESSP_Node1: NODE T_SYMBOL, 0, LESSP_Sym1
-GREATERP_Node0: NODE T_SYMBOL, 0, GREATERP_Sym0
-GREATERP_Node1: NODE T_SYMBOL, 0, GREATERP_Sym1
-MAKE_Node0: NODE T_SYMBOL, 0, MAKE_Sym0
-DEFINE_Node0: NODE T_SYMBOL, 0, DEFINE_Sym0
                 rorg $$
 
 workspaceTemplateSize equ $ - workspaceTemplate
@@ -102,17 +47,107 @@ workspaceTemplateSize equ $ - workspaceTemplate
 builtinNodeStart:
                   rorg $8000
 voidNode:         NODE T_VOID, 0, 0
+trueNode:       NODE T_SYMBOL, 0, TRUE_Sym
+falseNode:      NODE T_SYMBOL, 0, FALSE_Sym
+endNode:        NODE T_SYMBOL, 0, END_Sym
+RUN_Node0: NODE T_SYMBOL, 0, RUN_Sym0
+IF_Node0: NODE T_SYMBOL, 0, IF_Sym0
+IFELSE_Node0: NODE T_SYMBOL, 0, IFELSE_Sym0
+REPEAT_Node0: NODE T_SYMBOL, 0, REPEAT_Sym0
+STOP_Node0: NODE T_SYMBOL, 0, STOP_Sym0
+OUTPUT_Node0: NODE T_SYMBOL, 0, OUTPUT_Sym0
+OUTPUT_Node1: NODE T_SYMBOL, 0, OUTPUT_Sym1
+BYE_Node0: NODE T_SYMBOL, 0, BYE_Sym0
+IGNORE_Node0: NODE T_SYMBOL, 0, IGNORE_Sym0
+PRINT_Node0: NODE T_SYMBOL, 0, PRINT_Sym0
+PRINT_Node1: NODE T_SYMBOL, 0, PRINT_Sym1
+TYPE_Node0: NODE T_SYMBOL, 0, TYPE_Sym0
+SHOW_Node0: NODE T_SYMBOL, 0, SHOW_Sym0
+READRAWLINE_Node0: NODE T_SYMBOL, 0, READRAWLINE_Sym0
+READCHAR_Node0: NODE T_SYMBOL, 0, READCHAR_Sym0
+READCHAR_Node1: NODE T_SYMBOL, 0, READCHAR_Sym1
+READLIST_Node0: NODE T_SYMBOL, 0, READLIST_Sym0
+READLIST_Node1: NODE T_SYMBOL, 0, READLIST_Sym1
+CLEARTEXT_Node0: NODE T_SYMBOL, 0, CLEARTEXT_Sym0
+CLEARTEXT_Node1: NODE T_SYMBOL, 0, CLEARTEXT_Sym1
+SETCURSOR_Node0: NODE T_SYMBOL, 0, SETCURSOR_Sym0
+CURSOR_Node0: NODE T_SYMBOL, 0, CURSOR_Sym0
+FPUT_Node0: NODE T_SYMBOL, 0, FPUT_Sym0
+LPUT_Node0: NODE T_SYMBOL, 0, LPUT_Sym0
+LIST_Node0: NODE T_SYMBOL, 0, LIST_Sym0
+WORD_Node0: NODE T_SYMBOL, 0, WORD_Sym0
+SENTENCE_Node0: NODE T_SYMBOL, 0, SENTENCE_Sym0
+SENTENCE_Node1: NODE T_SYMBOL, 0, SENTENCE_Sym1
+FIRST_Node0: NODE T_SYMBOL, 0, FIRST_Sym0
+LAST_Node0: NODE T_SYMBOL, 0, LAST_Sym0
+BUTFIRST_Node0: NODE T_SYMBOL, 0, BUTFIRST_Sym0
+BUTFIRST_Node1: NODE T_SYMBOL, 0, BUTFIRST_Sym1
+ITEM_Node0: NODE T_SYMBOL, 0, ITEM_Sym0
+WORDP_Node0: NODE T_SYMBOL, 0, WORDP_Sym0
+WORDP_Node1: NODE T_SYMBOL, 0, WORDP_Sym1
+LISTP_Node0: NODE T_SYMBOL, 0, LISTP_Sym0
+LISTP_Node1: NODE T_SYMBOL, 0, LISTP_Sym1
+EMPTYP_Node0: NODE T_SYMBOL, 0, EMPTYP_Sym0
+EMPTYP_Node1: NODE T_SYMBOL, 0, EMPTYP_Sym1
+EQUALP_Node0: NODE T_SYMBOL, 0, EQUALP_Sym0
+EQUALP_Node1: NODE T_SYMBOL, 0, EQUALP_Sym1
+NOTEQUALP_Node0: NODE T_SYMBOL, 0, NOTEQUALP_Sym0
+NOTEQUALP_Node1: NODE T_SYMBOL, 0, NOTEQUALP_Sym1
+NUMBERP_Node0: NODE T_SYMBOL, 0, NUMBERP_Sym0
+NUMBERP_Node1: NODE T_SYMBOL, 0, NUMBERP_Sym1
+COUNT_Node0: NODE T_SYMBOL, 0, COUNT_Sym0
+AND_Node0: NODE T_SYMBOL, 0, AND_Sym0
+OR_Node0: NODE T_SYMBOL, 0, OR_Sym0
+NOT_Node0: NODE T_SYMBOL, 0, NOT_Sym0
+SUM_Node0: NODE T_SYMBOL, 0, SUM_Sym0
+DIFFERENCE_Node0: NODE T_SYMBOL, 0, DIFFERENCE_Sym0
+PRODUCT_Node0: NODE T_SYMBOL, 0, PRODUCT_Sym0
+QUOTIENT_Node0: NODE T_SYMBOL, 0, QUOTIENT_Sym0
+REMAINDER_Node0: NODE T_SYMBOL, 0, REMAINDER_Sym0
+LESSP_Node0: NODE T_SYMBOL, 0, LESSP_Sym0
+LESSP_Node1: NODE T_SYMBOL, 0, LESSP_Sym1
+GREATERP_Node0: NODE T_SYMBOL, 0, GREATERP_Sym0
+GREATERP_Node1: NODE T_SYMBOL, 0, GREATERP_Sym1
+RANDOM_Node0: NODE T_SYMBOL, 0, RANDOM_Sym0
+MAKE_Node0: NODE T_SYMBOL, 0, MAKE_Sym0
+THING_Node0: NODE T_SYMBOL, 0, THING_Sym0
+DEFINE_Node0: NODE T_SYMBOL, 0, DEFINE_Sym0
+GC_Node0: NODE T_SYMBOL, 0, GC_Sym0
+LOAD_Node0: NODE T_SYMBOL, 0, LOAD_Sym0
+TO_Node0: NODE T_SYMBOL, 0, TO_Sym0
 RUN_Subr: NODE T_SUBR, 0, p_RUN
 IF_Subr: NODE T_SUBR, 0, p_IF
 IFELSE_Subr: NODE T_SUBR, 0, p_IFELSE
 REPEAT_Subr: NODE T_SUBR, 0, p_REPEAT
 STOP_Subr: NODE T_SUBR, 0, p_STOP
 OUTPUT_Subr: NODE T_SUBR, 0, p_OUTPUT
+BYE_Subr: NODE T_SUBR, 0, p_BYE
+IGNORE_Subr: NODE T_SUBR, 0, p_IGNORE
+PRINT_Subr: NODE T_SUBR, 0, p_PRINT
+TYPE_Subr: NODE T_SUBR, 0, p_TYPE
+SHOW_Subr: NODE T_SUBR, 0, p_SHOW
+READRAWLINE_Subr: NODE T_SUBR, 0, p_READRAWLINE
+READCHAR_Subr: NODE T_SUBR, 0, p_READCHAR
+READLIST_Subr: NODE T_SUBR, 0, p_READLIST
+CLEARTEXT_Subr: NODE T_SUBR, 0, p_CLEARTEXT
+SETCURSOR_Subr: NODE T_SUBR, 0, p_SETCURSOR
+CURSOR_Subr: NODE T_SUBR, 0, p_CURSOR
 FPUT_Subr: NODE T_SUBR, 0, p_FPUT
+LPUT_Subr: NODE T_SUBR, 0, p_LPUT
+LIST_Subr: NODE T_SUBR, 0, p_LIST
+WORD_Subr: NODE T_SUBR, 0, p_WORD
+SENTENCE_Subr: NODE T_SUBR, 0, p_SENTENCE
 FIRST_Subr: NODE T_SUBR, 0, p_FIRST
+LAST_Subr: NODE T_SUBR, 0, p_LAST
 BUTFIRST_Subr: NODE T_SUBR, 0, p_BUTFIRST
-COUNT_Subr: NODE T_SUBR, 0, p_COUNT
 ITEM_Subr: NODE T_SUBR, 0, p_ITEM
+WORDP_Subr: NODE T_SUBR, 0, p_WORDP
+LISTP_Subr: NODE T_SUBR, 0, p_LISTP
+EMPTYP_Subr: NODE T_SUBR, 0, p_EMPTYP
+EQUALP_Subr: NODE T_SUBR, 0, p_EQUALP
+NOTEQUALP_Subr: NODE T_SUBR, 0, p_NOTEQUALP
+NUMBERP_Subr: NODE T_SUBR, 0, p_NUMBERP
+COUNT_Subr: NODE T_SUBR, 0, p_COUNT
 AND_Subr: NODE T_SUBR, 0, p_AND
 OR_Subr: NODE T_SUBR, 0, p_OR
 NOT_Subr: NODE T_SUBR, 0, p_NOT
@@ -120,8 +155,83 @@ SUM_Subr: NODE T_SUBR, 0, p_SUM
 DIFFERENCE_Subr: NODE T_SUBR, 0, p_DIFFERENCE
 PRODUCT_Subr: NODE T_SUBR, 0, p_PRODUCT
 QUOTIENT_Subr: NODE T_SUBR, 0, p_QUOTIENT
+REMAINDER_Subr: NODE T_SUBR, 0, p_REMAINDER
 LESSP_Subr: NODE T_SUBR, 0, p_LESSP
 GREATERP_Subr: NODE T_SUBR, 0, p_GREATERP
+RANDOM_Subr: NODE T_SUBR, 0, p_RANDOM
 MAKE_Subr: NODE T_SUBR, 0, p_MAKE
+THING_Subr: NODE T_SUBR, 0, p_THING
 DEFINE_Subr: NODE T_SUBR, 0, p_DEFINE
+GC_Subr: NODE T_SUBR, 0, p_GC
+LOAD_Subr: NODE T_SUBR, 0, p_LOAD
+TO_Subr: NODE T_SUBR, 0, p_TO
                   rorg $$
+
+TRUE_Sym: SYMBOL voidNode, voidNode, voidNode, falseNode, "TRUE"
+FALSE_Sym: SYMBOL voidNode, voidNode, voidNode, endNode, "FALSE"
+END_Sym: SYMBOL voidNode, voidNode, voidNode, RUN_Node0, "END"
+RUN_Sym0: SYMBOL RUN_Subr, voidNode, voidNode, IF_Node0, "RUN"
+IF_Sym0: SYMBOL IF_Subr, voidNode, voidNode, IFELSE_Node0, "IF"
+IFELSE_Sym0: SYMBOL IFELSE_Subr, voidNode, voidNode, REPEAT_Node0, "IFELSE"
+REPEAT_Sym0: SYMBOL REPEAT_Subr, voidNode, voidNode, STOP_Node0, "REPEAT"
+STOP_Sym0: SYMBOL STOP_Subr, voidNode, voidNode, OUTPUT_Node0, "STOP"
+OUTPUT_Sym0: SYMBOL OUTPUT_Subr, voidNode, voidNode, OUTPUT_Node1, "OUTPUT"
+OUTPUT_Sym1: SYMBOL OUTPUT_Subr, voidNode, voidNode, BYE_Node0, "OP"
+BYE_Sym0: SYMBOL BYE_Subr, voidNode, voidNode, IGNORE_Node0, "BYE"
+IGNORE_Sym0: SYMBOL IGNORE_Subr, voidNode, voidNode, PRINT_Node0, "IGNORE"
+PRINT_Sym0: SYMBOL PRINT_Subr, voidNode, voidNode, PRINT_Node1, "PRINT"
+PRINT_Sym1: SYMBOL PRINT_Subr, voidNode, voidNode, TYPE_Node0, "PR"
+TYPE_Sym0: SYMBOL TYPE_Subr, voidNode, voidNode, SHOW_Node0, "TYPE"
+SHOW_Sym0: SYMBOL SHOW_Subr, voidNode, voidNode, READRAWLINE_Node0, "SHOW"
+READRAWLINE_Sym0: SYMBOL READRAWLINE_Subr, voidNode, voidNode, READCHAR_Node0, "READRAWLINE"
+READCHAR_Sym0: SYMBOL READCHAR_Subr, voidNode, voidNode, READCHAR_Node1, "READCHAR"
+READCHAR_Sym1: SYMBOL READCHAR_Subr, voidNode, voidNode, READLIST_Node0, "RC"
+READLIST_Sym0: SYMBOL READLIST_Subr, voidNode, voidNode, READLIST_Node1, "READLIST"
+READLIST_Sym1: SYMBOL READLIST_Subr, voidNode, voidNode, CLEARTEXT_Node0, "RL"
+CLEARTEXT_Sym0: SYMBOL CLEARTEXT_Subr, voidNode, voidNode, CLEARTEXT_Node1, "CLEARTEXT"
+CLEARTEXT_Sym1: SYMBOL CLEARTEXT_Subr, voidNode, voidNode, SETCURSOR_Node0, "CT"
+SETCURSOR_Sym0: SYMBOL SETCURSOR_Subr, voidNode, voidNode, CURSOR_Node0, "SETCURSOR"
+CURSOR_Sym0: SYMBOL CURSOR_Subr, voidNode, voidNode, FPUT_Node0, "CURSOR"
+FPUT_Sym0: SYMBOL FPUT_Subr, voidNode, voidNode, LPUT_Node0, "FPUT"
+LPUT_Sym0: SYMBOL LPUT_Subr, voidNode, voidNode, LIST_Node0, "LPUT"
+LIST_Sym0: SYMBOL LIST_Subr, voidNode, voidNode, WORD_Node0, "LIST"
+WORD_Sym0: SYMBOL WORD_Subr, voidNode, voidNode, SENTENCE_Node0, "WORD"
+SENTENCE_Sym0: SYMBOL SENTENCE_Subr, voidNode, voidNode, SENTENCE_Node1, "SENTENCE"
+SENTENCE_Sym1: SYMBOL SENTENCE_Subr, voidNode, voidNode, FIRST_Node0, "SE"
+FIRST_Sym0: SYMBOL FIRST_Subr, voidNode, voidNode, LAST_Node0, "FIRST"
+LAST_Sym0: SYMBOL LAST_Subr, voidNode, voidNode, BUTFIRST_Node0, "LAST"
+BUTFIRST_Sym0: SYMBOL BUTFIRST_Subr, voidNode, voidNode, BUTFIRST_Node1, "BUTFIRST"
+BUTFIRST_Sym1: SYMBOL BUTFIRST_Subr, voidNode, voidNode, ITEM_Node0, "BF"
+ITEM_Sym0: SYMBOL ITEM_Subr, voidNode, voidNode, WORDP_Node0, "ITEM"
+WORDP_Sym0: SYMBOL WORDP_Subr, voidNode, voidNode, WORDP_Node1, "WORDP"
+WORDP_Sym1: SYMBOL WORDP_Subr, voidNode, voidNode, LISTP_Node0, "WORD?"
+LISTP_Sym0: SYMBOL LISTP_Subr, voidNode, voidNode, LISTP_Node1, "LISTP"
+LISTP_Sym1: SYMBOL LISTP_Subr, voidNode, voidNode, EMPTYP_Node0, "LIST?"
+EMPTYP_Sym0: SYMBOL EMPTYP_Subr, voidNode, voidNode, EMPTYP_Node1, "EMPTYP"
+EMPTYP_Sym1: SYMBOL EMPTYP_Subr, voidNode, voidNode, EQUALP_Node0, "EMPTY?"
+EQUALP_Sym0: SYMBOL EQUALP_Subr, voidNode, voidNode, EQUALP_Node1, "EQUALP"
+EQUALP_Sym1: SYMBOL EQUALP_Subr, voidNode, voidNode, NOTEQUALP_Node0, "EQUAL?"
+NOTEQUALP_Sym0: SYMBOL NOTEQUALP_Subr, voidNode, voidNode, NOTEQUALP_Node1, "NOTEQUALP"
+NOTEQUALP_Sym1: SYMBOL NOTEQUALP_Subr, voidNode, voidNode, NUMBERP_Node0, "NOTEQUAL?"
+NUMBERP_Sym0: SYMBOL NUMBERP_Subr, voidNode, voidNode, NUMBERP_Node1, "NUMBERP"
+NUMBERP_Sym1: SYMBOL NUMBERP_Subr, voidNode, voidNode, COUNT_Node0, "NUMBER?"
+COUNT_Sym0: SYMBOL COUNT_Subr, voidNode, voidNode, AND_Node0, "COUNT"
+AND_Sym0: SYMBOL AND_Subr, voidNode, voidNode, OR_Node0, "AND"
+OR_Sym0: SYMBOL OR_Subr, voidNode, voidNode, NOT_Node0, "OR"
+NOT_Sym0: SYMBOL NOT_Subr, voidNode, voidNode, SUM_Node0, "NOT"
+SUM_Sym0: SYMBOL SUM_Subr, voidNode, voidNode, DIFFERENCE_Node0, "SUM"
+DIFFERENCE_Sym0: SYMBOL DIFFERENCE_Subr, voidNode, voidNode, PRODUCT_Node0, "DIFFERENCE"
+PRODUCT_Sym0: SYMBOL PRODUCT_Subr, voidNode, voidNode, QUOTIENT_Node0, "PRODUCT"
+QUOTIENT_Sym0: SYMBOL QUOTIENT_Subr, voidNode, voidNode, REMAINDER_Node0, "QUOTIENT"
+REMAINDER_Sym0: SYMBOL REMAINDER_Subr, voidNode, voidNode, LESSP_Node0, "REMAINDER"
+LESSP_Sym0: SYMBOL LESSP_Subr, voidNode, voidNode, LESSP_Node1, "LESSP"
+LESSP_Sym1: SYMBOL LESSP_Subr, voidNode, voidNode, GREATERP_Node0, "LESS?"
+GREATERP_Sym0: SYMBOL GREATERP_Subr, voidNode, voidNode, GREATERP_Node1, "GREATERP"
+GREATERP_Sym1: SYMBOL GREATERP_Subr, voidNode, voidNode, RANDOM_Node0, "GREATER?"
+RANDOM_Sym0: SYMBOL RANDOM_Subr, voidNode, voidNode, MAKE_Node0, "RANDOM"
+MAKE_Sym0: SYMBOL MAKE_Subr, voidNode, voidNode, THING_Node0, "MAKE"
+THING_Sym0: SYMBOL THING_Subr, voidNode, voidNode, DEFINE_Node0, "THING"
+DEFINE_Sym0: SYMBOL DEFINE_Subr, voidNode, voidNode, GC_Node0, "DEFINE"
+GC_Sym0: SYMBOL GC_Subr, voidNode, voidNode, LOAD_Node0, "GC"
+LOAD_Sym0: SYMBOL LOAD_Subr, voidNode, voidNode, TO_Node0, "LOAD"
+TO_Sym0: SYMBOL TO_Subr, voidNode, voidNode, 0, "TO"

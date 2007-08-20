@@ -238,7 +238,7 @@ RealToFP_Byte:
 	inc de
 	dec bc
 	ret
-	 	
+
 realToFPTable:
 	db 00h, 08h, 16h, 24h, 32h, 40h, 48h, 56h
 	db 64h, 72h, 80h, 88h, 96h
@@ -268,10 +268,10 @@ FP9ToReal:
 	 adc a,a
 	 ld (de),a
 
-	 ld a,(currentGCFlag)
-	 ld b,a
+; 	 ld a,(currentGCFlag)
+; 	 ld b,a
 	 call FPToReal_Byte
-	 or b
+;	 or b
 	 ld (de),a
 
 	 call FPToReal_Byte

@@ -117,7 +117,32 @@ OUTPUT_Value:
 	 pop hl
 	jp Eval_ExitProcedure
 OUTPUT_Error:
-	 BCALL _ErrInvalid	; STOP/OUTPUT can only be used inside
-				; a procedure
+	 ld hl,EMsg_OnlyInsideProcedure
+	 ld de,(evalNextProc)
+	 ld a,E_Invalid
+	 call ThrowError
 	 ;; UNREACHABLE
 
+
+;; BYE:
+;;
+;; BYE
+;;
+;; Exit Logo and return to the calculator homescreen.
+
+p_BYE:
+	BUILTIN_PRIMITIVE 0, 0, 0, ""
+	BCALL _JForceCmdNoChar
+	;; UNREACHABLE
+
+
+;; IGNORE:
+;;
+;; IGNORE thing
+;;
+;; Do nothing.
+
+p_IGNORE:
+	BUILTIN_PRIMITIVE 1, 1, 1, ""
+	call PopOPS
+	jp ReturnVoid

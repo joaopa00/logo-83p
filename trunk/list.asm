@@ -34,10 +34,14 @@ NewList_nc:
 	 ;; Fill in the provided data
 	 ld (hl),c
 	 inc hl
-	 ld a,(currentGCFlag)
-	 xor b
-	 xor 80h		; because B already had bit 7 set
-	 ld (hl),a
+
+; 	 ld a,(currentGCFlag)
+; 	 xor b
+; 	 xor 80h		; because B already had bit 7 set
+;	 ld (hl),a
+	 res 7,b
+	 ld (hl),b
+
 	 inc hl
 	 pop bc
 	ld (hl),c
@@ -183,9 +187,13 @@ SetListButirst_nc:
 	call RefToPointer
 	ld (hl),e
 	inc hl
-	ld a,(currentGCFlag)
-	xor d
-	xor 80h
+
+; 	ld a,(currentGCFlag)
+; 	xor d
+; 	xor 80h
+	ld a,d
+	and 7Fh
+
 	ld (hl),a
 	ret
 
@@ -225,3 +233,92 @@ IsList:
 	ret
 
 
+;; CopyList:
+;;
+;; Make a copy of a list.  (This does not copy the elements of the
+;; list; those are identical to the elements of the original.)
+;;
+;; Input:
+;; - HL = original list
+;;
+;; Output:
+;; - HL = new list
+;;
+;; Destroys:
+;; - AF, BC, DE
+
+CopyList:
+	call IsList
+	jp c,TypeAssertionFailed
+	ret z			; copy of empty list is empty list
+
+	call GetListFirstButfirst
+	push de
+	 ld de,emptyNode
+	 call NewList
+	 pop de
+	push hl			; save start of new list
+CopyList_Loop:
+	;; HL = last node in new list; DE = next node in original list
+	 ld a,e
+	 cp low(emptyNode)
+	 jr nz,CopyList_Continue
+	 ld a,d
+	 cp high(emptyNode)
+	 jr z,CopyList_Done
+CopyList_Continue:
+	 push hl		; last node in new list
+	  ex de,hl
+	  call GetListFirstButfirst ; get next element of original
+	  push de
+	   ld de,emptyNode
+	   call NewList
+	   pop bc
+	  pop de
+	 push bc
+	  ex de,hl
+	  call SetListButfirst
+	  ex de,hl
+	  pop de
+	 jr CopyList_Loop
+CopyList_Done:
+	 pop hl
+	ret
+
+
+;; ConcatenateLists:
+;;
+;; Join two lists together by modifying the first list to point to the
+;; second.
+;;
+;; Input:
+;; - HL = first list (WILL BE MODIFIED)
+;; - DE = second list
+;;
+;; Output:
+;; - HL = combined list
+;;
+;; Destroys:
+;; - AF, DE
+
+ConcatenateLists:
+	call IsList
+	jp c,TypeAssertionFailed
+	jr z,ConcatenateLists_FirstEmpty
+	push hl
+ConcatenateLists_Loop:
+	 push hl
+	  call GetListButfirst
+	  call IsList
+	  jr z,ConcatenateLists_Done
+	  pop af
+	 jr ConcatenateLists_Loop
+ConcatenateLists_Done:
+	  pop hl
+	 call SetListButfirst
+	 pop hl
+	ret
+
+ConcatenateLists_FirstEmpty:
+	ex de,hl
+	ret
