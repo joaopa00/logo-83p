@@ -31,8 +31,11 @@ NewObject:
 	push de
 	 ld (hl),a
 	 inc hl
-	 ld a,(currentGCFlag)
-	 ld (hl),a
+
+; 	 ld a,(currentGCFlag)
+; 	 ld (hl),a
+	 ld (hl),0
+
 	 inc hl
 	 ld de,(newObjectMPtr)
 	 ld (hl),e
@@ -64,9 +67,12 @@ NewAtom:
 	  pop bc
 	 ld (hl),c
 	 inc hl
-	 ld a,(currentGCFlag)
-	 or b
-	 ld (hl),a
+
+; 	 ld a,(currentGCFlag)
+; 	 or b
+; 	 ld (hl),a
+	 ld (hl),b
+
 	 pop bc
 	inc hl
 	ld (hl),c

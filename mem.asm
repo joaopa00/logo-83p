@@ -416,7 +416,6 @@ InsertUninitNodeMem:
 ;;
 ;; Destroys:
 ;; - AF, HL
-;; - iMathPtr2 (?)
 
 DoInsertMem:
 	ld hl,(FPS)
@@ -427,7 +426,7 @@ DoInsertMem:
 	 sbc hl,bc
 	 pop bc
 	jr nc,DoInsertMem_NotEnough
-
+DoInsertMem_FinallyGotEnough:
 	push bc
 	 ld h,b
 	 ld l,c
@@ -436,9 +435,26 @@ DoInsertMem:
 	ret
 
 DoInsertMem_NotEnough:
+	ld (insertionMPtr),de
+	push bc
+	 call GCRun
+	 pop bc
+	ld de,(insertionMPtr)
+	jr c,DoInsertMem
 
-	;; [Call garbage collector, check again for free memory.]
+	;; GC complete; if there still isn't enough memory, too bad.
 
-	BCALL _ErrMemory
-	;; UNREACHABLE
+	ld hl,(FPS)
+	add hl,bc
+	jr c,DoInsertMem_StillNotEnough
+	push bc
+	 ld bc,(OPS)
+	 sbc hl,bc
+	 pop bc
+	jr c,DoInsertMem_FinallyGotEnough
+
+DoInsertMem_StillNotEnough:
+	ld hl,EMsg_OutOfMemory
+	ld a,E_Memory
+	jp ThrowError
 

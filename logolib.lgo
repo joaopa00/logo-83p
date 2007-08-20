@@ -1,0 +1,28 @@
+define "memberp [[mp.it mp.ls]
+  if empty? :mp.ls [op "false]
+  if equal? :mp.it first :mp.ls [op "true]
+  op memberp :mp.it bf :mp.ls
+]
+
+; This should be defined as a primitive or as a macro
+define "while [[wh.cd wh.ls]
+  if not run :wh.cd [stop]
+  run :wh.ls
+  while :wh.cd :wh.ls
+]
+
+; This is completely wrong
+define "readword [[]
+  op first rl
+]
+
+; This is also very wrong
+;define "for [[for.ex for.ls]
+;  if equal? count :for.ex 3 [
+;     make "for.ex lput 1 :for.ex
+;  ]
+;  if greater? item 2 :for.ex item 3 :for.ex [ stop ]
+;  make first :for.ex item 2 :for.ex
+;  run :for.ls
+;  for fput first :for.ex fput sum item 2 :for.ex item 4 :for.ex bf bf :for.ex :for.ls
+;]

@@ -18,12 +18,14 @@
 PushOPS:
 	push de
 	 push hl
+PushOPS_TryAgain:
 	  ld hl,(FPS)
 	  ld de,(OPS)
 	  dec de
 	  or a
 	  sbc hl,de
 	  jr nc,PushOPS_OutOfMem
+PushOPS_AllIsWell:
  ifdef STACK_DEBUG
 	  ld hl,(minOPS)
 	  or a
@@ -43,7 +45,21 @@ PushOPS_NoSetMin:
 	ret
 
 PushOPS_OutOfMem:
-	  ;; [GC]
+	  push bc
+	   push af
+	    call GCRun
+	    pop bc
+	   ld a,b
+	   pop bc
+	  jr c,PushOPS_TryAgain
+
+	  ld hl,(FPS)
+	  ld de,(OPS)
+	  dec de
+	  or a
+	  sbc hl,de
+	  jr c,PushOPS_AllIsWell
+
 	  BCALL _ErrMemory
 	  ;; UNREACHABLE
 

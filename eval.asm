@@ -107,15 +107,20 @@ EvalRecursive_Context:
 	or a
 	sbc hl,de
 	call PushOPS
+	ld hl,(evalNextProc)
+	call PushOPS
 
 	call Eval_Run
 
 	push hl
+	 call PopOPS
+	 ld (evalNextProc),hl
 	 call Pop3OPS		; HL = evalList, DE = currentSubr, BC = offset
 	 ld (evalList),hl
 	 ex de,hl
 	 pop de
 	call EnterSubr
+	ld de,(evalNextProc)
 	jp Eval_ReturnValue
 
 
@@ -218,6 +223,12 @@ EvalMain:
 	pop hl			; GETRETURN
 	ld (evalNextProc),hl
 	ld (mainSP),sp
+
+	ld hl,0
+	ld (evalProcTop),hl
+ 	ld hl,voidNode
+	ld (evalRunningProc),hl
+
 	ld bc,CONTEXT_OPTIONAL
 	jr Eval_Begin
 
@@ -252,9 +263,15 @@ Eval_EOF_Void:
 	ret
 
 Eval_NotEnoughArgs:
+	ld hl,EMsg_NotEnoughInputs
+	ld de,(evalNextProc)
+	jr Eval_SyntaxError
+
 Eval_MissingRightParen:
-	BCALL _ErrSyntax
-	;; UNREACHABLE
+	ld hl,EMsg_TooManyLParens
+Eval_SyntaxError:
+	ld a,E_Syntax
+	jp ThrowError
 
 
 ;;; Main Evaluator Loop
@@ -264,6 +281,8 @@ Eval_DecRemainingArgs:
 Eval_SetContext:
 	ld (evalContext),hl
 Eval_Loop:
+	bit onInterrupt,(iy+onFlags)
+	jp nz,ErrBreak
 	ld hl,(evalContext)
 	ld a,h
 	or l
@@ -314,8 +333,10 @@ Eval_GotArg:
 	call IsList
 	jr z,Eval_Loop
 Eval_BadNonVoid:
-	BCALL _ErrSyntax	; non-void return in void context
-	;; UNREACHABLE
+	call PopOPS
+	ex de,hl
+	ld hl,EMsg_SayWhatToDo
+	jp Eval_SyntaxError
 
 Eval_Quote:
 	call GetAtomData
@@ -325,16 +346,26 @@ Eval_Colon:
 	call GetAtomData
 	call WordToSymbol
 	jr c,Eval_VariableUndefined
-	call GetSymbolVariable
-	ld de,voidNode
+	push hl
+	 call GetSymbolVariable
+	 pop de
+	ld bc,voidNode
 	or a
-	sbc hl,de
-	add hl,de
+	sbc hl,bc
+	add hl,bc
 	jr nz,Eval_GotArg
+	ex de,hl
 Eval_VariableUndefined:
+	ex de,hl
+	ld hl,EMsg_HasNoValue
+Eval_UndefinedError:
+	ld a,E_Undefined
+	jp ThrowError
+
 Eval_ProcedureUndefined:
-	BCALL _ErrUndefined
-	;; UNREACHABLE
+	ld hl,EMsg_DontKnowHow
+	ld de,(evalNextProc)
+	jr Eval_UndefinedError
 
 Eval_Char:
 Eval_String:
@@ -364,32 +395,40 @@ Eval_Symbol:
 Eval_GotAllArgs:
 	ld hl,(evalNextProc)
 	call IsWord
-	jr c,Eval_InvokeAnonymous
-	call GetSymbolProcedure
-Eval_InvokeAnonymous:
+	call nc,GetSymbolProcedure
 	call GetType
 	cp T_SUBR
 	jr z,Eval_InvokeSubr
 	cp T_LIST
 	jr z,Eval_InvokeList
-	BCALL _ErrDataType
-	;; UNREACHABLE
+Eval_InvalidProcedureError:
+	ld hl,(evalNextProc)
+	call IsWord
+	call nc,GetSymbolProcedure
+	ex de,hl
+	ld hl,EMsg_BadInputAPPLY
+	ld a,E_DataType
+	jp ThrowError
 
 Eval_InvokeSubr:
 	ld bc,0
 	ld de,(evalNumArgs)
 	call EnterSubr
+	ld de,(evalNextProc)
 Eval_ReturnValue:
-	push hl
-	 call Pop3OPS
-	 ld (evalContext),bc
-	 ld (evalNumArgs),de
-	 ld (evalNextProc),hl
+	;; DE = outputting procedure, HL = value
+	push de
+	 push hl
+	  call Pop3OPS
+	  ld (evalContext),bc
+	  ld (evalNumArgs),de
+	  ld (evalNextProc),hl
+	  pop de
+	 ld hl,voidNode
+	 or a
+	 sbc hl,de
+	 ex de,hl
 	 pop de
-	ld hl,voidNode
-	or a
-	sbc hl,de
-	ex de,hl
 	jp nz,Eval_GotArg
 	ld hl,(evalContext)
 	bit 7,h
@@ -402,9 +441,11 @@ Eval_ReturnValue:
 	ld hl,CONTEXT_VOID
 	ld (evalContext),hl
 	jp Eval_Loop
-Eval_BadVoid:	
-	BCALL _ErrSyntax	; void return in non-void context
-	;; UNREACHABLE
+
+Eval_BadVoid:
+	ld hl,EMsg_DidntOutput
+	ld bc,(evalNextProc)
+	jp Eval_SyntaxError
 
 Eval_InvokeList:
 	;; Invoke a user procedure
@@ -504,8 +545,8 @@ Eval_InvokeList_ArgsLoop:
 	  pop hl
 	 jr Eval_InvokeList_ArgsLoop
 Eval_InvokeList_Error:
-	 BCALL _ErrInvalid	; invalid procedure definition
-	 ;; UNREACHABLE
+	 pop af
+	jp Eval_InvalidProcedureError
 
 Eval_InvokeList_ArgsDone:
 	 ld hl,(evalNumArgs)
@@ -533,25 +574,28 @@ Eval_InvokeList_Anonymous:
 	ld bc,CONTEXT_VOID
 	call Eval_Run
 Eval_ExitProcedure:
-	push hl
-	 call Pop3OPS
-	 ld (evalProcTop),bc
-	 ld (evalRunningProc),de
-	 ld (evalList),hl
-	 call PopOPS
-Eval_InvokeList_RestoreVarsLoop:
-	 ;; restore local variables
-	 ld a,h
-	 or l
-	 jr z,Eval_InvokeList_RestoreVarsDone
-	 dec hl
+	ld de,(evalRunningProc)
+	push de
 	 push hl
-	  call Pop2OPS		; HL = name, DE = value
-	  call SetSymbolVariable
-	  pop hl
-	 jr Eval_InvokeList_RestoreVarsLoop
+	  call Pop3OPS
+	  ld (evalProcTop),bc
+	  ld (evalRunningProc),de
+	  ld (evalList),hl
+	  call PopOPS
+Eval_InvokeList_RestoreVarsLoop:
+	  ;; restore local variables
+	  ld a,h
+	  or l
+	  jr z,Eval_InvokeList_RestoreVarsDone
+	  dec hl
+	  push hl
+	   call Pop2OPS		; HL = name, DE = value
+	   call SetSymbolVariable
+	   pop hl
+	  jr Eval_InvokeList_RestoreVarsLoop
 Eval_InvokeList_RestoreVarsDone:
-	 pop hl
+	  pop hl
+	 pop de
 	jp Eval_ReturnValue
 
 

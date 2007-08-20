@@ -2,12 +2,36 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Extra OS definitions
+;;;
+
+_HomeUp equ 4558h
+_DispErrorScreen equ 49DEh
+_LoadAIndPaged equ 8051h
+
+localizeHookPtr equ 9BCCh
+_EnableLocalizeHook equ 4F93h
+_DisableLocalizeHook equ 4F96h
+_CallLocalizeHook equ 4006h
+localizeHookActive equ 1
+localizeHookFlag equ 35h
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Macros
 ;;;
 
 BCALL macro addr
 	nolist
 	rst 28h
+	;; UNREACHABLE
+	dw addr
+	list
+	.endm
+
+BJUMP macro addr
+	nolist
+	call 50h
 	;; UNREACHABLE
 	dw addr
 	list
@@ -127,11 +151,13 @@ appvarStart:		ds 2
 userNodeStartMinus2:	ds 2
 uninitNodeStart:	ds 2
 uninitNodeEnd:		ds 2
-currentGCFlag:		ds 1
+gcGenState:		ds 1
 freeNodeList:		ds 2
 freeNodePairList:	ds 2
 freeNodeQuadList:	ds 2
 firstSymbol:		ds 2
+getCharFunc:		ds 2
+getSFunc:		ds 2
 mainSP:			ds 2
 evalProcTop:		ds 2
 
@@ -150,19 +176,47 @@ evalNextProc:		ds 2
 evalNumArgs:		ds 2
 evalContext:		ds 2
 currentSubr:		ds 2
-subrStartAddr:		ds 2
+errorParam1:		ds 2
+errorParam2:		ds 2
 
 refDataSize equ $ - refDataStart
 
-STACK_DEBUG equ 1
-minOPS:			ds 2
+errorMessage:		ds 2
+subrStartAddr:		ds 2
+
+gcDeepPanicSP:		ds 2
+gcDeepTempSP:		ds 2
+gcFinishState:		ds 1
+
+equalOPS:		
+getSBuffer:		ds 2
+getSBufferEnd:		ds 2
+parseCallback:		ds 2
+
+fileReadOffset:		ds 2
+fileReadSize:		ds 2
+fileReadPage:		ds 1
+NFBuffer:		ds 24
+
+;STACK_DEBUG equ 1
+;minOPS:		ds 2
+	
+ if $ > cmdShadow+128
+ error "Data does not fit in saferam"
+ endif
 
 appvarStartMPtr		equ iMathPtr1 ; global
-newObjectMPtr		equ iMathPtr2 ; used when creating object
-parseBufferMPtr		equ iMathPtr3 ; used by parser
-symbolSearchMPtr	equ iMathPtr4 ; used when creating symbols
+insertionMPtr		equ iMathPtr2 ; used when inserting memory
+newObjectMPtr		equ iMathPtr3 ; used when creating object
+parseBufferMPtr		equ iMathPtr4 ; used by parser
+symbolSearchMPtr	equ iMathPtr5 ; used when creating symbols
+fileReadStartMPtr	equ asm_data_ptr1
 
 subrExecMem		equ appBackUpScreen
+
+gcDeepMemStart	equ saveSScreen
+gcDeepMemEnd 	equ saveSScreen+768
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -206,6 +260,9 @@ T_INT		equ 29		; Integer
 ;;; Miscellaneous
 ;;;
 
+VERSION_MAJOR equ 0
+VERSION_MINOR equ 0
+
 NODE_MEM_INCREMENT equ 256
 
 ;;; Evaluation contexts
@@ -217,3 +274,6 @@ CONTEXT_OPTIONAL  equ -1	; Single value allowed, or void
 CONTEXT_VOID      equ -2	; Only void procedures allowed
 CONTEXT_PAREN     equ -3	; Inside parentheses
 
+;;; Backspace character
+
+Ldelete equ 0FFh

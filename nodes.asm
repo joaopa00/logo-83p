@@ -334,8 +334,11 @@ FreeNode:
 SetNodeFree:
 	ld (hl),T_FREE<<2
 	inc hl
-	ld a,(currentGCFlag)
-	ld (hl),a
+
+; 	ld a,(currentGCFlag)
+; 	ld (hl),a
+	ld (hl),0
+
 	inc hl
 	ld (hl),e
 	inc hl

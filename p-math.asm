@@ -99,6 +99,22 @@ ErrDivBy0:
 	;; UNREACHABLE
 
 
+;; REMAINDER:
+;;
+;; REMAINDER number1 number2
+;;
+;; Output the remainder when dividing :number1 by :number2.
+
+p_REMAINDER:
+	BUILTIN_PRIMITIVE 2, 2, 2, "II$"
+	call Pop2OPS
+	ld a,d
+	or e
+	jr z,ErrDivBy0
+	BCALL _DivHLByDE
+	ret
+
+
 ;; LESSP:
 ;;
 ;; LESSP number1 number2
@@ -129,3 +145,23 @@ p_GREATERP:
 	sbc hl,de
 	jp nc,ReturnTrue
 	jp ReturnFalse
+
+
+;; RANDOM:
+;;
+;; RANDOM number
+;;
+;; Output a random integer less than the input and greater than or
+;; equal to zero.
+
+p_RANDOM:
+	BUILTIN_PRIMITIVE 1, 1, 1, "I$"
+	BCALL _Random
+	call PopOPS
+	BCALL _SetXXXXOP2
+	BCALL _FPMult
+	BCALL _Trunc
+	BCALL _ConvOP1
+ warning "FIXME: ConvOP1 is stupid, don't use it"
+	ex de,hl
+	ret

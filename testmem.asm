@@ -158,7 +158,7 @@ KeyLoop:
 	cp kCapF
 	jr z,FreeSomething
 	cp kCapG
-	jr z,RunGC
+	jp z,RunGC
 	jr KeyLoop
 	
 Left:	ld hl,(selectedNode)
@@ -183,7 +183,12 @@ Proceed:
 	jp Loop
 
 AllocAString:
-	call GetS
+ 	ld hl,7
+ 	ld (curRow),hl
+	BCALL _EraseEOL
+	ld hl,appBackUpScreen
+	ld bc,768
+	call GetS_Console
 	push hl
 	 BCALL _StrLength
 	 call NewString
@@ -193,7 +198,12 @@ AllocAString:
 	jr Proceed
 
 ParseSomething:
-	call GetS
+ 	ld hl,7
+ 	ld (curRow),hl
+	BCALL _EraseEOL
+	ld hl,appBackUpScreen
+	ld bc,768
+	call GetS_Console
 	push hl
 	 BCALL _StrLength
 	 pop hl
@@ -229,62 +239,66 @@ FreeOnlyNode:
 	jr Proceed
 
 RunGC:
+	;; Save the selected node on the stack.  The GC should detect
+	;; this and refuse to free the selected node, or any node
+	;; that it points to.
+
 	ld hl,(selectedNode)
 	push hl
-	 call GCQuick
+	 call GCDeep
 	 pop hl
 	jr Proceed
 
-GetS:
-	ld hl,7
-	ld (curRow),hl
-	BCALL _EraseEOL
-	ld hl,appBackUpScreen
-GetS_Loop:
-	push hl
-	 BCALL _CursorOn
-	 res onInterrupt,(iy+onFlags)
-	 BCALL _GetKey
-	 push af
-	  BCALL _CursorOff
-	  pop af
-	 pop hl
-	cp kLeft
-	jr z,GetS_Del
-	cp kEnter
-	jr z,GetS_Done
-	cp EchoStart
-	jr c,GetS_Loop
-	ld e,a
-	cp 0FCh
-	jr c,GetS_1B
-	ld d,a
-	ld a,(keyExtend)
-	ld e,a
-GetS_1B:
-	push hl
-	 BCALL _KeyToString
-	 inc hl
-	 ld a,(hl)
-	 pop hl
-	ld (hl),a
-	inc hl
-	BCALL _PutC
-	jr GetS_Loop
+; GetS:
+; 	ld hl,7
+; 	ld (curRow),hl
+; 	BCALL _EraseEOL
+; 	ld hl,appBackUpScreen
+; GetS_Loop:
+; 	push hl
+; 	 BCALL _CursorOn
+; 	 res onInterrupt,(iy+onFlags)
+; 	 BCALL _GetKey
+; 	 push af
+; 	  BCALL _CursorOff
+; 	  pop af
+; 	 pop hl
+; 	cp kLeft
+; 	jr z,GetS_Del
+; 	cp kEnter
+; 	jr z,GetS_Done
+; 	cp EchoStart
+; 	jr c,GetS_Loop
+; 	ld e,a
+; 	cp 0FCh
+; 	jr c,GetS_1B
+; 	ld d,a
+; 	ld a,(keyExtend)
+; 	ld e,a
+; GetS_1B:
+; 	push hl
+; 	 BCALL _KeyToString
+; 	 inc hl
+; 	 ld a,(hl)
+; 	 pop hl
+; 	ld (hl),a
+; 	inc hl
+; 	BCALL _PutC
+; 	jr GetS_Loop
 
-GetS_Del:
-	dec hl
-	ld a,(curCol)
-	dec a
-	ld (curCol),a
-	ld a,' '
-	BCALL _PutMap
-	jr GetS_Loop
+; GetS_Del:
+; 	dec hl
+; 	ld a,(curCol)
+; 	dec a
+; 	ld (curCol),a
+; 	ld a,' '
+; 	BCALL _PutMap
+; 	jr GetS_Loop
 
-GetS_Done:
-	ld (hl),0
-	ld hl,appBackUpScreen
-	ret
+; GetS_Done:
+; 	ld (hl),0
+; 	ld hl,appBackUpScreen
+; 	ret
 
 
 TypeCharTable:

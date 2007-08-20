@@ -21,12 +21,12 @@ TypeAssertionFailed:
 	 ld hl,0
 	 ld (curRow),hl
 	 ld hl,AssertionFailedStr
-	 BCALL _PutS
+	 call PutS_Console
 	 ex (sp),hl
 	 BCALL _DispHL
 	 BCALL _NewLine
 	 pop hl
-	BCALL _PutS
+	call PutS_Console
 	pop hl			; GETRETURN
 	push hl			; SETRETURN
 	BCALL _DispHL

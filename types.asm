@@ -179,7 +179,11 @@ CheckInputTypes_ValidateOK:
 	 jr CheckInputTypes_LoopDE
 
 CheckInputTypes_Error:
-	  BCALL _ErrDataType
+	  ex de,hl
+	  ld hl,EMsg_BadInput
+	  ld bc,(evalNextProc)
+	  ld a,E_Argument
+	  call ThrowError
 	  ;; UNREACHABLE
 
 CheckInputTypes_Symbol:
@@ -223,11 +227,12 @@ CheckInputTypes_Boolean:
 	  cp high(trueNode)
 	  jr nz,CheckInputTypes_Error
 	  ld a,l
-	  ld hl,0
 	  cp low(falseNode)
-	  jr z,CheckInputTypes_ConvertOK
-	  inc l
+	  jr z,CheckInputTypes_BooleanFalse
 	  cp low(trueNode)
-	  jr z,CheckInputTypes_ConvertOK
-	  jr CheckInputTypes_Error
-
+	  jr nz,CheckInputTypes_Error
+	  ld hl,1
+	  jr CheckInputTypes_ConvertOK
+CheckInputTypes_BooleanFalse:
+	  ld hl,0
+	  jr CheckInputTypes_ConvertOK

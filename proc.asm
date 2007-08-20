@@ -119,6 +119,148 @@ EnterSubr_Paged:
  endif
 
 
+;; IsTOLine:
+;;
+;; Check if input is a list starting with TO.
+;;
+;; Input:
+;; - HL = input list
+;;
+;; Output:
+;; - CF set if input is not a TO-line
+;; - CF clear if input is a TO-line
+;;
+;; Destroys:
+;; - DE
+
+IsTOLine:
+	call IsList
+	ret c
+	scf
+	ret z
+	push hl
+	 call GetListFirst
+	 ld de,TO_Node0
+	 or a
+	 sbc hl,de
+	 pop hl
+	ret z
+	scf
+	ret
+
+
+;; IsENDLine:
+;;
+;; Check if input is a list containing the single element END.
+;;
+;; Input:
+;; - HL = input list
+;;
+;; Output:
+;; - CF set if input is not an END-line
+;; - CF clear if input is an END-line
+;;
+;; Destroys:
+;; - HL, BC, DE
+	
+IsENDLine:
+	call IsList
+	ret c
+	scf
+	ret z
+	call GetListFirstButfirst
+	ld bc,endNode
+	or a
+	sbc hl,bc
+	scf
+	ret nz
+	ld hl,emptyNode
+	or a
+	sbc hl,de
+	ret z
+	scf
+	ret
+
+
+;; ParseProcDefinition:
+;;
+;; Parse a TO-form procedure definition.
+;;
+;; Input:
+;; - HL = TO-line
+;; - DE = body of procedure
+;;
+;; Output:
+;; - HL = name of new procedure
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+
+ParseProcDefinition:
+	push de
+	 call GetListButfirst
+	 call IsList
+	 jr c,ParseProcDefinition_NoName
+	 jr z,ParseProcDefinition_NoName
+	 call GetListFirstButfirst
+	 push hl		; name of procedure
+	  ex de,hl
+	  call CopyList
+	  push hl		; list of args
+ParseProcDefinition_ConvertArgsLoop:
+	   call IsList
+	   jr z,ParseProcDefinition_ConvertArgsDone
+	   push hl
+	    call GetListFirst
+	    call IsWord
+	    jr c,ParseProcDefinition_InvalidArg
+	    call GetType
+	    cp T_COLON
+	    call z,GetAtomData
+	    call WordToSymbol
+	    jr c,ParseProcDefinition_InvalidArg
+	    ex de,hl
+	    pop hl
+	   push hl
+	    call SetListFirst
+	    pop hl
+	   call GetListButfirst
+	   jr ParseProcDefinition_ConvertArgsLoop
+ParseProcDefinition_ConvertArgsDone:
+	   pop hl		; list of args
+	  pop bc		; procedure name
+	 pop de			; procedure body
+	push bc
+	 call NewList
+	 ex de,hl
+	 pop hl
+	push hl
+	 call SetSymbolProcedure
+	 pop hl
+	ret
+
+ParseProcDefinition_NoName:
+	 ld hl,EMsg_NotEnoughInputs
+	 ld de,TO_Node0
+	 ld a,E_Syntax
+	 call ThrowError
+	 ;; UNREACHABLE
+
+ParseProcDefinition_InvalidArg:
+	    ex de,hl
+	    ld hl,EMsg_BadInput
+	    ld bc,TO_Node0
+	    ld a,E_Syntax
+	    call ThrowError
+	    ;; UNREACHABLE
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Miscellaneous Subroutines
+;;;
+
+
 ;; ReturnVoid:
 ;;
 ;; Return void.
@@ -161,4 +303,152 @@ ReturnTrue:
 
 ReturnFalse:
 	ld hl,falseNode
+	ret
+
+
+;; ValuesEqual:
+;;
+;; Test if two values are equal
+;;
+;; Input:
+;; - HL = first value
+;; - DE = second value
+;;
+;; Output:
+;; - ZF set if values are equal
+;;
+;; Destroys:
+;; - AF, BC, DE, HL
+
+ValuesEqual:
+	;; Check if the values are identical
+	or a
+	sbc hl,de
+	ret z
+	add hl,de
+
+	;; Two integers are equal iff they are identical
+	bit 7,h
+	jr nz,ValuesEqual_NotInts
+	bit 7,d
+	jr nz,ValuesEqual_NotInts
+RetNZ:	or 1
+	ret
+ValuesEqual_NotInts:
+
+	call IsList
+	jr nc,ValuesEqual_List
+
+	;; Objects other than lists and words are EQUALP iff they are
+	;; identical
+	call IsWord
+	jr c,RetNZ
+
+	call GetType
+	push af
+	 ex de,hl
+	 call IsWord
+	 pop bc
+	jr c,RetNZ
+
+	;; Two symbols are equal iff they are identical
+	ld a,b
+	cp T_SYMBOL
+	jr nz,ValuesEqual_NotSymbols
+	call GetType
+	cp T_SYMBOL
+	jr z,RetNZ
+ValuesEqual_NotSymbols:
+
+	;; Compare lengths of words
+	push hl
+	 push de
+	  call GetWordSize
+	  ex de,hl
+	  pop hl
+	 push hl
+	  push de
+	   call GetWordSize
+	   pop bc
+	  or a
+	  sbc hl,bc
+	  pop de
+	 pop hl
+ValuesEqual_WordLoop:
+	;; Compare words character-by-character
+	ld a,b
+	or c
+	ret z
+	dec bc
+	push hl
+	 push bc
+	  push de
+	   ld d,b
+	   ld e,c
+	   call GetWordChar
+	   pop hl
+	  pop de
+	 push de
+	  push hl
+	   push af
+	    call GetWordChar
+	    pop bc
+	   cp b
+	   pop de
+	  pop bc
+	 pop hl
+	jr z,ValuesEqual_WordLoop
+	ret
+
+ValuesEqual_List:
+	ex de,hl
+	call IsList
+	jr c,RetNZ
+
+	push hl
+	 ld hl,(OPS)
+	 ld (equalOPS),hl
+	 ld hl,0
+	 call PushOPS
+	 pop hl
+ValuesEqual_ListLoop:
+	call IsList
+	jr c,ValuesEqual_NotList
+	jr z,ValuesEqual_ListEmpty
+
+	ex de,hl
+	call IsList
+	jr c,ValuesEqual_ListFail
+	jr z,ValuesEqual_ListFail
+
+	call PushOPS
+	call GetListFirst
+	ex de,hl
+	call PushOPS
+	call GetListFirst
+	jr ValuesEqual_ListLoop
+
+ValuesEqual_NotList:
+	call ValuesEqual
+	jr nz,ValuesEqual_ListFail
+ValuesEqual_ListNext:
+	call PopOPS
+	ld a,h
+	or l
+	ret z
+	call GetListButfirst
+	ex de,hl
+	call PopOPS
+	call GetListButfirst
+	jr ValuesEqual_ListLoop
+
+ValuesEqual_ListEmpty:
+	ex de,hl
+	call IsList
+	jr c,ValuesEqual_ListFail
+	jr z,ValuesEqual_ListNext
+ValuesEqual_ListFail:
+	ld hl,(equalOPS)
+	ld (OPS),hl
+	or 1
 	ret
